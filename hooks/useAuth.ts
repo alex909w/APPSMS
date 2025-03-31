@@ -1,55 +1,48 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useSession, signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
-interface User {
-  id: number
-  username: string
-  role: string
-}
-
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: session, status } = useSession()
   const router = useRouter()
+  const isLoading = status === "loading"
+  const isAuthenticated = status === "authenticated"
 
-  useEffect(() => {
-    // Check if user is logged in
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/me")
-        if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
-        } else {
-          setUser(null)
-          router.push("/")
-        }
-      } catch (error) {
-        console.error("Auth check error:", error)
-        setUser(null)
-        router.push("/")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAuth()
-  }, [router])
-
-  const logout = async () => {
+  const login = async (username: string, password: string) => {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
       })
-      setUser(null)
-      router.push("/")
+
+      if (result?.error) {
+        return { success: false, error: result.error }
+      }
+
+      router.push("/dashboard")
+      return { success: true }
     } catch (error) {
-      console.error("Logout error:", error)
+      return { success: false, error: "Error al iniciar sesión" }
     }
   }
 
-  return { user, loading, logout }
+  const loginWithProvider = (provider: string) => {
+    signIn(provider, { callbackUrl: "/dashboard" })
+  }
+
+  const logout = () => {
+    signOut({ callbackUrl: "/" })
+  }
+
+  return {
+    user: session?.user,
+    isLoading,
+    isAuthenticated,
+    login,
+    loginWithProvider,
+    logout,
+  }
 }
 

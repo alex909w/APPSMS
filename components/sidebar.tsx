@@ -2,28 +2,18 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  BarChart3,
-  Users,
-  MessageSquare,
-  FileText,
-  Variable,
-  Send,
-  Settings,
-  Home,
-  ClipboardList,
-  LogOut,
-} from "lucide-react"
+import { BarChart3, Users, MessageSquare, FileText, Variable, Send, Settings, Home, ClipboardList } from "lucide-react"
+import { LogoutButton } from "./logout-button" // Importar el componente de logout
 
 export function Sidebar() {
   const pathname = usePathname()
 
   const routes = [
     {
-      href: "/",
+      href: "/dashboard",
       icon: Home,
       label: "Dashboard",
-      active: pathname === "/",
+      active: pathname === "/dashboard",
     },
     {
       href: "/templates",
@@ -105,13 +95,7 @@ export function Sidebar() {
         </nav>
       </div>
       <div className="mt-auto p-4">
-        <Link
-          href="/auth/logout"
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
-        >
-          <LogOut className="h-4 w-4" />
-          Cerrar Sesión
-        </Link>
+        <LogoutButton />
       </div>
     </div>
   )

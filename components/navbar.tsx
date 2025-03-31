@@ -76,7 +76,7 @@ export function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/auth/logout" className="text-red-600 focus:text-red-600">
+                <Link href="/" className="text-red-600 focus:text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cerrar Sesión</span>
                 </Link>

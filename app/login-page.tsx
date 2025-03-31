@@ -45,7 +45,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
-          <h1 className="text-3xl font-bold text-primary">SMS App</h1>
+          <h1 className="text-3xl font-bold text-primary">APPSMS</h1>
         </div>
 
         <Card>

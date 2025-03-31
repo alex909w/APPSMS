@@ -6,7 +6,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,31 +21,47 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!username || !password) {
+      setError("Por favor ingrese usuario y contraseña")
+      return
+    }
+
     setLoading(true)
     setError("")
 
-    // Simulación de autenticación
-    // En un caso real, aquí harías una llamada a tu API de autenticación
-    setTimeout(() => {
-      if (username === "admin" && password === "password") {
-        // Guardar estado de autenticación
-        localStorage.setItem("isAuthenticated", "true")
-        // Redireccionar al dashboard
-        router.push("/dashboard")
-      } else {
-        setError("Usuario o contraseña incorrectos")
+    try {
+      // Llamada real a la API de autenticación
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al iniciar sesión")
       }
+
+      // Redireccionar al dashboard en caso de éxito
+      router.push("/dashboard")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
-          <h1 className="text-3xl font-bold text-primary">APPSMS</h1>
+          <h1 className="text-3xl font-bold text-primary">SMS App</h1>
         </div>
 
         <Card>
@@ -56,6 +72,7 @@ export default function LoginPage() {
           <CardContent>
             {error && (
               <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4 mr-2" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -109,10 +126,16 @@ export default function LoginPage() {
               <div className="absolute inset-x-0 top-1/2 h-px bg-muted"></div>
               <span className="relative bg-card px-2 text-xs text-muted-foreground">O continúa con</span>
             </div>
-            <Button variant="outline" className="w-full">
-              <Image src="/placeholder.svg?height=16&width=16" width={16} height={16} alt="Google" className="mr-2" />
-              Google
-            </Button>
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <Button variant="outline" className="w-full">
+                <Image src="/placeholder.svg?height=16&width=16" width={16} height={16} alt="Google" className="mr-2" />
+                Google
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </Button>
+            </div>
             <div className="text-center text-sm">
               ¿No tienes una cuenta?{" "}
               <Link href="/register" className="text-primary hover:underline">

@@ -7,48 +7,63 @@ export async function GET() {
     return NextResponse.json({ mensajes })
   } catch (error) {
     console.error("Error al obtener mensajes:", error)
-    return NextResponse.json({ error: "Error al obtener mensajes" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Error al obtener mensajes" }, 
+      { status: 500 }
+    )
   }
 }
 
-// Modifica la función POST para aceptar un estado simulado
 export async function POST(request: Request) {
   try {
     const { telefono, contenido, plantillaId, variablesUsadas, estadoSimulado } = await request.json()
 
+    // Validación de campos requeridos
     if (!telefono || !contenido) {
-      return NextResponse.json({ error: "Teléfono y contenido son requeridos" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Teléfono y contenido son requeridos" }, 
+        { status: 400 }
+      )
     }
 
-    // Validar el estado simulado si se proporciona
-    const estado =
-      estadoSimulado && ["enviado", "entregado", "fallido", "pendiente"].includes(estadoSimulado)
-        ? estadoSimulado
-        : "enviado" // Estado predeterminado
+    // Validar y establecer el estado
+    const estado = ["enviado", "entregado", "fallido", "pendiente"].includes(estadoSimulado)
+      ? estadoSimulado
+      : "enviado"
 
-    // Simular un pequeño retraso para dar sensación de procesamiento
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // Simular retraso de procesamiento
+    await new Promise(resolve => setTimeout(resolve, 800))
 
-    // Enviar mensaje (guardar en la base de datos)
-    const resultado = await executeQuery(
+    // Enviar mensaje (usando parámetros $1, $2, etc. para PostgreSQL)
+    const resultado = await executeQuery<any>(
       `INSERT INTO mensajes_enviados 
-       (telefono, contenido_mensaje, plantilla_id, variables_usadas, estado) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [telefono, contenido, plantillaId || null, JSON.stringify(variablesUsadas || {}), estado],
+       (telefono, contenido_mensaje, plantilla_id, variables_usadas, estado, fecha_envio) 
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+       RETURNING *`,
+      [
+        telefono,
+        contenido,
+        plantillaId || null,
+        variablesUsadas ? JSON.stringify(variablesUsadas) : null,
+        estado
+      ]
     )
 
-    // Registrar actividad
-    await registrarActividad(
-      null, // usuarioId (null para sistema)
-      "send_sms",
-      `Mensaje enviado a ${telefono}${plantillaId ? ` usando plantilla ID ${plantillaId}` : ""}`,
-      request.headers.get("x-forwarded-for") || "127.0.0.1",
-    )
+    // Registrar actividad actualizada
+    await registrarActividad({
+      usuario_id: null,
+      accion: "send_sms",
+      tipo_entidad: "mensaje",
+      entidad_id: resultado[0].id,
+      descripcion: `Mensaje enviado a ${telefono}${plantillaId ? ` usando plantilla ID ${plantillaId}` : ""}`,
+      direccion_ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+      agente_usuario: request.headers.get("user-agent") || "desconocido"
+    })
 
     return NextResponse.json(
       {
         message: "Mensaje enviado exitosamente",
-        id: resultado.insertId,
+        mensaje: resultado[0],
         success: true,
         details: {
           telefono,
@@ -60,7 +75,13 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error("Error al enviar mensaje:", error)
-    return NextResponse.json({ error: "Error al enviar mensaje", success: false }, { status: 500 })
+    return NextResponse.json(
+      { 
+        error: "Error al enviar mensaje",
+        details: error instanceof Error ? error.message : String(error),
+        success: false 
+      }, 
+      { status: 500 }
+    )
   }
 }
-

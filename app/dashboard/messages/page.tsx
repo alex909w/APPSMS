@@ -1,78 +1,77 @@
-import { getSentMessages } from "@/lib/db"
+import { Suspense } from "react"
+import { db } from "@/lib/db"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { DashboardShell } from "@/components/dashboard-shell"
+import { MessagesTable } from "@/components/messages-table"
+import { DashboardSkeleton } from "@/components/dashboard-skeleton"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 
-export default async function MessagesPage() {
-  const messages = await getSentMessages()
+export const metadata = {
+  title: "Mensajes",
+}
 
-  // Función para obtener el color del badge según el estado
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "sent":
-        return "bg-green-500"
-      case "failed":
-        return "bg-red-500"
-      default:
-        return "bg-yellow-500"
-    }
+async function MessagesPage() {
+  const session = await getServerSession(authOptions)
+
+  if (!session) {
+    redirect("/login")
   }
 
-  return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mensajes Enviados</h1>
-        <Link href="/">
-          <Button variant="outline">Volver al Dashboard</Button>
-        </Link>
-      </div>
+  try {
+    const messages = await db.getMensajesEnviados(session.user.id)
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Número de Teléfono</TableHead>
-              <TableHead>Contenido</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Enviado Por</TableHead>
-              <TableHead>Fecha de Envío</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {messages.length > 0 ? (
-              messages.map((message) => (
-                <TableRow key={message.id}>
-                  <TableCell>{message.id}</TableCell>
-                  <TableCell>{message.phone_number}</TableCell>
-                  <TableCell className="max-w-xs truncate">{message.message_content}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(message.status)}>
-                      {message.status === "sent" ? "Enviado" : message.status === "failed" ? "Fallido" : "Pendiente"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{message.sent_by_name}</TableCell>
-                  <TableCell>{new Date(message.sent_at).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm">
-                      Ver Detalles
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  No hay mensajes enviados
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    return (
+      <DashboardShell>
+        <DashboardHeader heading="Mensajes" text="Gestiona y visualiza todos tus mensajes enviados.">
+          <Link href="/dashboard/send-sms">
+            <Button>Enviar nuevo mensaje</Button>
+          </Link>
+        </DashboardHeader>
+        <MessagesTable messages={messages} />
+      </DashboardShell>
+    )
+  } catch (error) {
+    console.error("Error al cargar mensajes:", error)
+    return (
+      <DashboardShell>
+        <DashboardHeader heading="Mensajes" text="Gestiona y visualiza todos tus mensajes enviados.">
+          <Link href="/dashboard/send-sms">
+            <Button>Enviar nuevo mensaje</Button>
+          </Link>
+        </DashboardHeader>
+        <div className="rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error al cargar datos</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>No se pudieron cargar los mensajes. Por favor, intenta de nuevo más tarde.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardShell>
+    )
+  }
+}
+
+export default function MessagesPageWrapper() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <MessagesPage />
+    </Suspense>
   )
 }
 

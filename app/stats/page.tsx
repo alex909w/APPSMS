@@ -136,8 +136,8 @@ export default async function StatsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
+              {estadisticas.moneda || "S"}
               {estadisticas.costoPromedio || "0.032"}
-              {estadisticas.moneda || "€"}
             </div>
             <p className="text-xs text-muted-foreground">Por mensaje enviado</p>
           </CardContent>
@@ -359,3 +359,4 @@ function TemplatesChart({ data }) {
     </div>
   )
 }
+

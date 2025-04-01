@@ -304,9 +304,115 @@ export async function getMensajeById(id: number) {
 
 // Obtener estadísticas
 export async function getEstadisticas() {
-  const totalMensajes = await executeQuery<any[]>("SELECT COUNT(*) as total FROM mensajes_enviados")
-  return {
-    totalMensajes: totalMensajes[0]?.total || 0,
+  try {
+    // Total de mensajes
+    const totalMensajes = await executeQuery<any[]>("SELECT COUNT(*) as total FROM mensajes_enviados")
+
+    // Mensajes por estado
+    const mensajesPorEstado = await executeQuery<any[]>(
+      `SELECT 
+         estado, COUNT(*) as total 
+       FROM mensajes_enviados 
+       GROUP BY estado`,
+    )
+
+    // Tasa de entrega y error
+    const tasaEntrega = await executeQuery<any[]>(
+      `SELECT 
+         ROUND((COUNT(*) FILTER (WHERE estado = 'entregado') * 100.0 / NULLIF(COUNT(*), 0)), 2) as tasa_entrega,
+         ROUND((COUNT(*) FILTER (WHERE estado = 'fallido') * 100.0 / NULLIF(COUNT(*), 0)), 2) as tasa_error
+       FROM mensajes_enviados`,
+    )
+
+    // Plantillas más usadas
+    const plantillasMasUsadas = await executeQuery<any[]>(
+      `SELECT 
+         pm.id, 
+         pm.nombre, 
+         COUNT(me.id) as total,
+         ROUND((COUNT(me.id) * 100.0 / NULLIF((SELECT COUNT(*) FROM mensajes_enviados WHERE plantilla_id IS NOT NULL), 0)), 2) as porcentaje
+       FROM plantillas_mensaje pm
+       JOIN mensajes_enviados me ON pm.id = me.plantilla_id
+       GROUP BY pm.id, pm.nombre
+       ORDER BY total DESC
+       LIMIT 5`,
+    )
+
+    // Mensajes por hora (últimas 24 horas)
+    const mensajesPorHora = await executeQuery<any[]>(
+      `SELECT 
+         EXTRACT(HOUR FROM fecha_envio) as hora, 
+         COUNT(*) as total
+       FROM mensajes_enviados
+       WHERE fecha_envio >= NOW() - INTERVAL '24 hours'
+       GROUP BY hora
+       ORDER BY hora`,
+    )
+
+    // Mensajes por día (últimos 7 días)
+    const mensajesPorDia = await executeQuery<any[]>(
+      `SELECT 
+         DATE(fecha_envio) as fecha, 
+         COUNT(*) as total
+       FROM mensajes_enviados
+       WHERE fecha_envio >= NOW() - INTERVAL '7 days'
+       GROUP BY fecha
+       ORDER BY fecha`,
+    )
+
+    // Mensajes por semana (últimas 4 semanas)
+    const mensajesPorSemana = await executeQuery<any[]>(
+      `SELECT 
+         DATE_TRUNC('week', fecha_envio) as fecha_inicio,
+         COUNT(*) as total
+       FROM mensajes_enviados
+       WHERE fecha_envio >= NOW() - INTERVAL '4 weeks'
+       GROUP BY fecha_inicio
+       ORDER BY fecha_inicio`,
+    )
+
+    // Porcentaje de crecimiento (comparando con el período anterior)
+    const porcentajeCrecimiento = await executeQuery<any[]>(
+      `SELECT 
+         ROUND(
+           (
+             (SELECT COUNT(*) FROM mensajes_enviados WHERE fecha_envio >= NOW() - INTERVAL '7 days') - 
+             (SELECT COUNT(*) FROM mensajes_enviados WHERE fecha_envio >= NOW() - INTERVAL '14 days' AND fecha_envio < NOW() - INTERVAL '7 days')
+           ) * 100.0 / 
+           NULLIF((SELECT COUNT(*) FROM mensajes_enviados WHERE fecha_envio >= NOW() - INTERVAL '14 days' AND fecha_envio < NOW() - INTERVAL '7 days'), 0),
+           2
+         ) as porcentaje`,
+    )
+
+    return {
+      totalMensajes: Number.parseInt(totalMensajes[0]?.total) || 0,
+      mensajesPorEstado: mensajesPorEstado || [],
+      tasaEntrega: Number.parseFloat(tasaEntrega[0]?.tasa_entrega) || 0,
+      tasaError: Number.parseFloat(tasaEntrega[0]?.tasa_error) || 0,
+      plantillasMasUsadas: plantillasMasUsadas || [],
+      mensajesPorHora: mensajesPorHora || [],
+      mensajesPorDia: mensajesPorDia || [],
+      mensajesPorSemana: mensajesPorSemana || [],
+      porcentajeCrecimiento: Number.parseFloat(porcentajeCrecimiento[0]?.porcentaje) || 0,
+      costoPromedio: 0.032, // Valor predeterminado
+      moneda: "€", // Valor predeterminado
+    }
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error)
+    // Devolver valores predeterminados en caso de error
+    return {
+      totalMensajes: 0,
+      mensajesPorEstado: [],
+      tasaEntrega: 0,
+      tasaError: 0,
+      plantillasMasUsadas: [],
+      mensajesPorHora: [],
+      mensajesPorDia: [],
+      mensajesPorSemana: [],
+      porcentajeCrecimiento: 0,
+      costoPromedio: 0.032,
+      moneda: "$",
+    }
   }
 }
 

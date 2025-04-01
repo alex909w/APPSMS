@@ -1,16 +1,4 @@
 import { supabase } from "./supabase"
-import { PrismaClient } from "@prisma/client"
-
-// Keep the Prisma client for compatibility with existing code
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"],
-  })
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
 
 // Supabase database helper functions
 export const db = {
@@ -375,6 +363,65 @@ export const db = {
     return data
   },
 
-  // Add any other functions your application needs
+  // Add getSentMessages for compatibility
+  async getSentMessages(userId: string) {
+    return this.getMensajesEnviados(userId)
+  },
+}
+
+// Export a mock Prisma client for compatibility
+export const prisma = {
+  user: {
+    findUnique: async ({ where }: any) => {
+      if (where.email) {
+        return db.getUserByEmail(where.email)
+      }
+      if (where.id) {
+        return db.getUser(where.id)
+      }
+      return null
+    },
+    findMany: async () => {
+      return db.getUsers()
+    },
+    create: async ({ data }: any) => {
+      return db.createUser(data)
+    },
+    update: async ({ where, data }: any) => {
+      const user = await db.getUser(where.id)
+      if (!user) return null
+      return db.createUser({ ...user, ...data })
+    },
+  },
+  contact: {
+    findMany: async ({ where }: any) => {
+      if (where?.userId) {
+        return db.getContacts(where.userId)
+      }
+      return []
+    },
+    findUnique: async ({ where }: any) => {
+      return db.getContact(where.id)
+    },
+    create: async ({ data }: any) => {
+      return db.createContact(data)
+    },
+    update: async ({ where, data }: any) => {
+      return db.updateContact(where.id, data)
+    },
+    delete: async ({ where }: any) => {
+      await db.deleteContact(where.id)
+      return { id: where.id }
+    },
+  },
+  // Add other models as needed
+  $connect: async () => {
+    // No-op for compatibility
+    return Promise.resolve()
+  },
+  $disconnect: async () => {
+    // No-op for compatibility
+    return Promise.resolve()
+  },
 }
 

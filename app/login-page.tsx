@@ -1,61 +1,50 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { Eye, EyeOff, AlertCircle, Github } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Eye, EyeOff, AlertCircle, Github } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const { login, loginWithProvider, isLoading } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!username || !password) {
-      setError("Por favor ingrese usuario y contraseña")
-      return
+      setError("Por favor ingrese usuario y contraseña");
+      return;
     }
 
-    setLoading(true)
-    setError("")
+    setLoading(true);
+    setError("");
 
     try {
-      // Llamada real a la API de autenticación
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      })
+      const result = await login(username, password);
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al iniciar sesión")
+      if (!result.success) {
+        setError(result.error || "Usuario o contraseña incorrectos");
+      } else {
+        // Redirigir al dashboard después de un inicio de sesión exitoso
+        window.location.href = "/dashboard";
       }
-
-      // Redireccionar al dashboard en caso de éxito
-      router.push("/dashboard")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
@@ -116,8 +105,8 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              <Button type="submit" className="w-full" disabled={loading || isLoading}>
+                {loading || isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
           </CardContent>
@@ -127,11 +116,21 @@ export default function LoginPage() {
               <span className="relative bg-card px-2 text-xs text-muted-foreground">O continúa con</span>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full">
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => loginWithProvider("google")}
+                disabled={isLoading}
+              >
                 <Image src="/placeholder.svg?height=16&width=16" width={16} height={16} alt="Google" className="mr-2" />
                 Google
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => loginWithProvider("github")}
+                disabled={isLoading}
+              >
                 <Github className="h-4 w-4 mr-2" />
                 GitHub
               </Button>
@@ -146,6 +145,5 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
-

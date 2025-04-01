@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Sidebar } from "@/components/sidebar"
@@ -13,17 +14,23 @@ interface Props {
 
 export default function ClientLayout({ children }: Props) {
   const pathname = usePathname()
+  const [isMounted, setIsMounted] = useState(false)
 
-  // No mostrar sidebar y navbar en la página de inicio (login)
-  const isLoginPage = pathname === "/"
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted) {
+    return null // Evita errores de hidratación en SSR
+  }
+
+  const isLoginPage = pathname === "/login" // Solo ocultar navbar y sidebar en login
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       {isLoginPage ? (
-        // Layout para la página de login
-        <div className="min-h-screen">{children}</div>
+        <div className="min-h-screen flex items-center justify-center">{children}</div>
       ) : (
-        // Layout para el resto de páginas
         <div className="flex min-h-screen">
           <div className="hidden md:block md:w-64">
             <Sidebar />
@@ -38,4 +45,3 @@ export default function ClientLayout({ children }: Props) {
     </ThemeProvider>
   )
 }
-

@@ -1,124 +1,150 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { FaGoogle } from "react-icons/fa"
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Eye, EyeOff, AlertCircle, Github } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const { login, loginWithProvider, isLoading } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!username || !password) {
+      setError("Por favor ingrese usuario y contraseña");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
 
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email,
-        password,
-      })
+      const result = await login(username, password);
 
-      if (result?.error) {
-        setError("Credenciales inválidas. Por favor, intenta de nuevo.")
+      if (!result.success) {
+        setError(result.error || "Usuario o contraseña incorrectos");
       } else {
-        router.push("/dashboard")
-        router.refresh()
+        // Redirigir al dashboard después de un inicio de sesión exitoso
+        window.location.href = "/dashboard";
       }
-    } catch (error) {
-      setError("Ocurrió un error al iniciar sesión. Por favor, intenta de nuevo.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {
-      setIsLoading(false)
+      setLoading(false);
     }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      await signIn("google", { callbackUrl: "/dashboard" })
-    } catch (error) {
-      console.error("Error al iniciar sesión con Google:", error)
-      setError("Ocurrió un error al iniciar sesión con Google. Por favor, intenta de nuevo.")
-      setIsLoading(false)
-    }
-  }
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
-          <CardDescription className="text-center">Ingresa tus credenciales para acceder a tu cuenta</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex justify-center">
+          <h1 className="text-3xl font-bold text-primary">SMS App</h1>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
+            <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Usuario</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Ingresa tu usuario"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Ingresa tu contraseña"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
+                  </Button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || isLoading}>
+                {loading || isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="relative flex w-full items-center justify-center">
+              <div className="absolute inset-x-0 top-1/2 h-px bg-muted"></div>
+              <span className="relative bg-card px-2 text-xs text-muted-foreground">O continúa con</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => loginWithProvider("google")}
+                disabled={isLoading}
+              >
+                <FcGoogle className="w-5 h-5" />
+                Google
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => loginWithProvider("github")}
+                disabled={isLoading}
+              >
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </Button>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-            </Button>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+            <div className="text-center text-sm">
+              ¿No tienes una cuenta?{" "}
+              <Link href="/register" className="text-primary hover:underline">
+                Regístrate
+              </Link>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
-            </div>
-          </div>
-
-          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-            <FaGoogle className="mr-2 h-4 w-4" />
-            Google
-          </Button>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <div className="text-sm text-center text-muted-foreground">
-            Al iniciar sesión, aceptas nuestros términos de servicio y política de privacidad.
-          </div>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }
-

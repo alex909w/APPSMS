@@ -5,203 +5,201 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff, AlertCircle, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { FaGoogle } from "react-icons/fa"
 import { signIn } from "next-auth/react"
 
 export default function RegisterPage() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
 
-    // Validaciones b��sicas
-    if (!formData.username || !formData.email || !formData.password) {
-      setError("Todos los campos son obligatorios")
+    // Validaciones básicas
+    if (!name.trim()) {
+      setError("El nombre es requerido")
+      setIsLoading(false)
       return
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Las contraseñas no coinciden")
+    if (!email.trim()) {
+      setError("El correo electrónico es requerido")
+      setIsLoading(false)
       return
     }
 
-    if (formData.password.length < 6) {
+    if (!password) {
+      setError("La contraseña es requerida")
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres")
+      setIsLoading(false)
       return
     }
 
-    setLoading(true)
-    setError("")
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden")
+      setIsLoading(false)
+      return
+    }
 
     try {
-      // Llamada a la API para registrar al usuario
+      // Enviar datos al endpoint de registro
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
+          name,
+          email,
+          password,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "Error al registrar usuario")
+        throw new Error(data.error || "Error al registrar usuario")
       }
 
-      // Iniciar sesión automáticamente después del registro
-      await signIn("credentials", {
-        username: formData.username,
-        password: formData.password,
-        redirect: false,
-      })
+      setSuccess("Usuario registrado correctamente. Redirigiendo al inicio de sesión...")
 
-      // Redirigir al dashboard
-      router.push("/dashboard")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar usuario")
+      // Redireccionar al login después de 2 segundos
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
+    } catch (error: any) {
+      setError(error.message || "Error al registrar usuario")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const handleProviderSignIn = (provider: string) => {
-    signIn(provider, { callbackUrl: "/dashboard" })
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" })
+    } catch (error) {
+      console.error("Error al registrarse con Google:", error)
+      setError("Ocurrió un error al registrarse con Google. Por favor, intenta de nuevo.")
+      setIsLoading(false)
+    }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex justify-center">
-          <h1 className="text-3xl font-bold text-primary">SMS App</h1>
-        </div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Crear cuenta</CardTitle>
+          <CardDescription className="text-center">Ingresa tus datos para crear una nueva cuenta</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Crear cuenta</CardTitle>
-            <CardDescription className="text-center">Ingresa tus datos para registrarte en el sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Nombre de usuario</Label>
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Ingresa tu nombre de usuario"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Ingresa tu correo electrónico"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Ingresa tu contraseña"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Confirma tu contraseña"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Registrando..." : "Registrarse"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="relative flex w-full items-center justify-center">
-              <div className="absolute inset-x-0 top-1/2 h-px bg-muted"></div>
-              <span className="relative bg-card px-2 text-xs text-muted-foreground">O continúa con</span>
+          {success && (
+            <Alert>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Tu nombre"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4 w-full">
-              <Button variant="outline" className="w-full" onClick={() => handleProviderSignIn("google")}>
-                <Image src="/placeholder.svg?height=16&width=16" width={16} height={16} alt="Google" className="mr-2" />
-                Google
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => handleProviderSignIn("github")}>
-                <Github className="h-4 w-4 mr-2" />
-                GitHub
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
-            <div className="text-center text-sm">
-              ¿Ya tienes una cuenta?{" "}
-              <Link href="/" className="text-primary hover:underline">
-                Iniciar sesión
-              </Link>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-          </CardFooter>
-        </Card>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Registrando..." : "Registrarse"}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">O regístrate con</span>
+            </div>
+          </div>
+
+          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading}>
+            <FaGoogle className="mr-2 h-4 w-4" />
+            Google
+          </Button>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <div className="text-sm text-center">
+            ¿Ya tienes una cuenta?{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              Iniciar sesión
+            </Link>
+          </div>
+          <div className="text-xs text-center text-muted-foreground">
+            Al registrarte, aceptas nuestros términos de servicio y política de privacidad.
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

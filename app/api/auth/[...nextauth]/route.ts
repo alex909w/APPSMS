@@ -14,14 +14,25 @@ interface ExtendedUser {
 
 export const authOptions = {
   providers: [
+    // Google OAuth
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    
+    // GitHub OAuth (Configuración actualizada)
     GithubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      // Opcional: Solicitar scopes adicionales (ej: repositorios)
+      authorization: {
+        params: {
+          scope: "read:user user:email", // Scopes por defecto
+        },
+      },
     }),
+    
+    // Credentials (Login tradicional)
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -34,19 +45,15 @@ export const authOptions = {
         }
 
         try {
-          const users = await executeQuery<any[]>("SELECT * FROM usuarios WHERE nombre_usuario = ? LIMIT 1", [
-            credentials.username,
-          ]);
+          const users = await executeQuery<any[]>(
+            "SELECT * FROM usuarios WHERE nombre_usuario = ? LIMIT 1",
+            [credentials.username]
+          );
 
-          if (users.length === 0) {
-            return null;
-          }
+          if (users.length === 0) return null;
 
           const user = users[0];
-
-          if (user.contrasena !== credentials.password) {
-            return null;
-          }
+          if (user.contrasena !== credentials.password) return null;
 
           const { contrasena, ...userWithoutPassword } = user;
           return {
@@ -63,6 +70,8 @@ export const authOptions = {
       },
     }),
   ],
+
+  // Callbacks (compartidos para todos los proveedores)
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -79,10 +88,11 @@ export const authOptions = {
       return session;
     },
     async signIn({ user, account, profile }) {
+      // Lógica para Google/GitHub (guardar en DB)
       if (account?.provider === "google" || account?.provider === "github") {
         try {
           const email = user.email;
-          if (!email) return true;
+          if (!email) return false;
 
           const existingUsers = await executeQuery<any[]>(
             "SELECT * FROM usuarios WHERE correo_electronico = ? LIMIT 1",
@@ -103,16 +113,26 @@ export const authOptions = {
           } else {
             await executeQuery(
               "UPDATE usuarios SET nombre_usuario = ?, proveedor_auth = ?, id_proveedor = ? WHERE correo_electronico = ?",
-              [user.name || existingUsers[0].nombre_usuario, account.provider, user.id, email]
+              [
+                user.name || existingUsers[0].nombre_usuario,
+                account.provider,
+                user.id,
+                email,
+              ]
             );
           }
+          return true;
         } catch (error) {
           console.error("Error saving OAuth user:", error);
+          return false;
         }
       }
+      // Credentials: No requiere lógica adicional
       return true;
     },
   },
+
+  // Configuración general
   pages: {
     signIn: "/",
     error: "/auth/error",

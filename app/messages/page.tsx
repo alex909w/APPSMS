@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { getMensajesEnviados } from "@/lib/db"
 import Link from "next/link"
+import dynamic from 'next/dynamic'
 
 export default async function MessagesPage() {
   // Obtener datos reales de la base de datos
@@ -32,6 +33,10 @@ export default async function MessagesPage() {
         return "bg-yellow-500"
     }
   }
+
+  const MessagesPage = dynamic(() => import('./MessagesComponent'), {
+    ssr: false
+  })
 
   // Función para obtener el texto del estado
   const getStatusText = (status: string) => {
@@ -134,3 +139,4 @@ export default async function MessagesPage() {
   )
 }
 
+export default MessagesPage

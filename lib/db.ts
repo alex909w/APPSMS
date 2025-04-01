@@ -1,4 +1,4 @@
-import { Pool } from "pg"
+import { Pool } from 'pg'
 
 // Configuración de la conexión a la base de datos PostgreSQL en Render
 const dbConfig = {
@@ -11,12 +11,12 @@ const dbConfig = {
 }
 
 // Crear un pool de conexiones
-let pool: pg.Pool
+let pool: pool.Pool
 
 // Inicializar el pool de conexiones
 function getPool() {
   if (!pool) {
-    pool = new pg.Pool(dbConfig)
+    pool = new Pool(dbConfig)
     console.log("Pool de conexiones PostgreSQL creado")
   }
   return pool

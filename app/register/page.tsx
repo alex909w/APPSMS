@@ -14,75 +14,83 @@ import { FaGoogle } from "react-icons/fa"
 import { signIn } from "next-auth/react"
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const validateForm = () => {
+    // Validar que todos los campos estén completos
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError("Todos los campos son obligatorios")
+      return false
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError("Formato de correo electrónico inválido")
+      return false
+    }
+
+    // Validar longitud de contraseña
+    if (formData.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres")
+      return false
+    }
+
+    // Validar que las contraseñas coincidan
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden")
+      return false
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
     setError(null)
     setSuccess(null)
 
-    // Validaciones básicas
-    if (!name.trim()) {
-      setError("El nombre es requerido")
-      setIsLoading(false)
-      return
-    }
+    // Validar formulario
+    if (!validateForm()) return
 
-    if (!email.trim()) {
-      setError("El correo electrónico es requerido")
-      setIsLoading(false)
-      return
-    }
-
-    if (!password) {
-      setError("La contraseña es requerida")
-      setIsLoading(false)
-      return
-    }
-
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
-      setIsLoading(false)
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden")
-      setIsLoading(false)
-      return
-    }
+    setIsLoading(true)
 
     try {
-      // Enviar datos al endpoint de registro
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
-          email,
-          password,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Error al registrar usuario")
+        throw new Error(data.message || "Error al registrar usuario")
       }
 
-      setSuccess("Usuario registrado correctamente. Redirigiendo al inicio de sesión...")
+      setSuccess("Usuario registrado exitosamente. Redirigiendo al inicio de sesión...")
 
-      // Redireccionar al login después de 2 segundos
+      // Esperar 2 segundos y redirigir al login
       setTimeout(() => {
         router.push("/login")
       }, 2000)
@@ -93,15 +101,15 @@ export default function RegisterPage() {
     }
   }
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignIn = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
       await signIn("google", { callbackUrl: "/dashboard" })
     } catch (error) {
-      console.error("Error al registrarse con Google:", error)
-      setError("Ocurrió un error al registrarse con Google. Por favor, intenta de nuevo.")
+      console.error("Error al iniciar sesión con Google:", error)
+      setError("Ocurrió un error al iniciar sesión con Google. Por favor, intenta de nuevo.")
       setIsLoading(false)
     }
   }
@@ -111,7 +119,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Crear cuenta</CardTitle>
-          <CardDescription className="text-center">Ingresa tus datos para crear una nueva cuenta</CardDescription>
+          <CardDescription className="text-center">Ingresa tus datos para registrarte en la plataforma</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
@@ -121,20 +129,21 @@ export default function RegisterPage() {
           )}
 
           {success && (
-            <Alert>
+            <Alert className="bg-green-50 border-green-200 text-green-800 dark:bg-green-900 dark:border-green-800 dark:text-green-200">
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
+              <Label htmlFor="username">Nombre de usuario</Label>
               <Input
-                id="name"
-                type="text"
-                placeholder="Tu nombre"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="username"
+                name="username"
+                placeholder="usuario123"
+                value={formData.username}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -142,10 +151,12 @@ export default function RegisterPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -153,19 +164,24 @@ export default function RegisterPage() {
               <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
+              <p className="text-xs text-muted-foreground">La contraseña debe tener al menos 6 caracteres</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
               <Input
                 id="confirmPassword"
+                name="confirmPassword"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -179,11 +195,11 @@ export default function RegisterPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">O regístrate con</span>
+              <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
             </div>
           </div>
 
-          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading}>
+          <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
             <FaGoogle className="mr-2 h-4 w-4" />
             Google
           </Button>

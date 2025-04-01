@@ -18,29 +18,46 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("Credenciales incompletas")
           return null
         }
 
         try {
           // Buscar usuario en la base de datos
           const users = await executeQuery<any[]>("SELECT * FROM users WHERE email = $1", [credentials.email])
+          console.log("Usuario encontrado:", users.length > 0)
 
-          const user = users[0]
-
-          if (!user) {
+          if (!users || users.length === 0) {
             console.log("Usuario no encontrado:", credentials.email)
             return null
           }
 
-          // Verificar si la contraseña está hasheada
+          const user = users[0]
+          console.log("Datos de usuario:", {
+            id: user.id,
+            email: user.email,
+            hasPasswordHash: !!user.password_hash,
+            hasPassword: !!user.password,
+          })
+
+          // Verificar contraseña
           let passwordMatch = false
 
+          // Primero intentar con password_hash (bcrypt)
           if (user.password_hash) {
-            // Si tenemos un hash, verificar con bcrypt
-            passwordMatch = await bcrypt.compare(credentials.password, user.password_hash)
+            try {
+              passwordMatch = await bcrypt.compare(credentials.password, user.password_hash)
+              console.log("Verificación bcrypt:", passwordMatch)
+            } catch (bcryptError) {
+              console.error("Error en bcrypt:", bcryptError)
+              // Si falla bcrypt, intentar con comparación directa
+              passwordMatch = credentials.password === user.password
+              console.log("Verificación directa (fallback):", passwordMatch)
+            }
           } else if (user.password) {
-            // Compatibilidad con contraseñas sin hash (no recomendado para producción)
+            // Comparación directa si no hay hash
             passwordMatch = credentials.password === user.password
+            console.log("Verificación directa:", passwordMatch)
           }
 
           if (!passwordMatch) {
@@ -48,6 +65,7 @@ export const authOptions = {
             return null
           }
 
+          console.log("Autenticación exitosa para:", credentials.email)
           return {
             id: user.id.toString(),
             name: user.name,
@@ -64,6 +82,8 @@ export const authOptions = {
 
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("SignIn callback:", { provider: account?.provider, userId: user?.id })
+
       if (account?.provider === "google") {
         try {
           const email = user.email
@@ -168,7 +188,7 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 días
   },
 
-  debug: process.env.NODE_ENV === "development",
+  debug: true, // Habilitar modo debug para ver más información
   secret: process.env.NEXTAUTH_SECRET,
 }
 

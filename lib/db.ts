@@ -38,7 +38,7 @@ export const db = {
 
   // Contacts
   async getContacts(userId: string) {
-    const { data, error } = await supabase.from("contacts").select("*").eq("userId", userId)
+    const { data, error } = await supabase.from("contacts").select("*").eq("user_id", userId)
 
     if (error) throw error
     return data
@@ -74,7 +74,7 @@ export const db = {
 
   // Groups
   async getGroups(userId: string) {
-    const { data, error } = await supabase.from("groups").select("*").eq("userId", userId)
+    const { data, error } = await supabase.from("groups").select("*").eq("user_id", userId)
 
     if (error) throw error
     return data
@@ -92,8 +92,8 @@ export const db = {
     const { data, error } = await supabase
       .from("messages")
       .select("*")
-      .eq("userId", userId)
-      .order("createdAt", { ascending: false })
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
     return data
@@ -108,7 +108,7 @@ export const db = {
 
   // Templates
   async getTemplates(userId: string) {
-    const { data, error } = await supabase.from("templates").select("*").eq("userId", userId)
+    const { data, error } = await supabase.from("templates").select("*").eq("user_id", userId)
 
     if (error) throw error
     return data
@@ -123,7 +123,7 @@ export const db = {
 
   // Variables
   async getVariables(userId: string) {
-    const { data, error } = await supabase.from("variables").select("*").eq("userId", userId)
+    const { data, error } = await supabase.from("variables").select("*").eq("user_id", userId)
 
     if (error) throw error
     return data
@@ -135,5 +135,246 @@ export const db = {
     if (error) throw error
     return data
   },
+
+  // Additional functions needed by your application
+  async executeQuery(query: string, params: any[] = []) {
+    // This is a compatibility function for raw SQL queries
+    // In Supabase, we can use the rpc function for stored procedures
+    // or the .from().select() for most queries
+    try {
+      const { data, error } = await supabase.rpc("execute_query", {
+        query_text: query,
+        params_array: params,
+      })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error executing query:", error)
+      throw error
+    }
+  },
+
+  // Configuration functions
+  async actualizarConfiguracion(userId: string, config: any) {
+    // Check if configuration exists
+    const { data: existingConfig } = await supabase.from("configuration").select("*").eq("user_id", userId).single()
+
+    if (existingConfig) {
+      // Update existing configuration
+      const { data, error } = await supabase.from("configuration").update(config).eq("user_id", userId).select()
+
+      if (error) throw error
+      return data[0]
+    } else {
+      // Create new configuration
+      const { data, error } = await supabase
+        .from("configuration")
+        .insert([{ user_id: userId, ...config }])
+        .select()
+
+      if (error) throw error
+      return data[0]
+    }
+  },
+
+  // Contact functions
+  async crearContacto(contactData: any) {
+    const { data, error } = await supabase.from("contacts").insert([contactData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async getContactos(userId: string) {
+    const { data, error } = await supabase.from("contacts").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  // Group functions
+  async getDetallesGrupo(groupId: string) {
+    const { data, error } = await supabase
+      .from("groups")
+      .select(`
+        *,
+        contacts:group_contacts(
+          contact:contacts(*)
+        )
+      `)
+      .eq("id", groupId)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getGruposContacto(contactId: string) {
+    const { data, error } = await supabase
+      .from("group_contacts")
+      .select(`
+        group:groups(*)
+      `)
+      .eq("contact_id", contactId)
+
+    if (error) throw error
+    return data.map((item) => item.group)
+  },
+
+  async agregarContactoAGrupo(groupId: string, contactId: string) {
+    const { data, error } = await supabase
+      .from("group_contacts")
+      .insert([{ group_id: groupId, contact_id: contactId }])
+      .select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async eliminarContactoDeGrupo(groupId: string, contactId: string) {
+    const { error } = await supabase.from("group_contacts").delete().eq("group_id", groupId).eq("contact_id", contactId)
+
+    if (error) throw error
+    return true
+  },
+
+  // Message functions
+  async getMensajesEnviados(userId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(*),
+        template:templates(*)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+
+  async getMensajeById(messageId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(*),
+        template:templates(*)
+      `)
+      .eq("id", messageId)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async enviarMensaje(messageData: any) {
+    const { data, error } = await supabase.from("messages").insert([messageData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  // Template functions
+  async getMessageTemplates(userId: string) {
+    const { data, error } = await supabase.from("templates").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getPlantillasMensaje(userId: string) {
+    return this.getMessageTemplates(userId)
+  },
+
+  async createMessageTemplate(templateData: any) {
+    const { data, error } = await supabase.from("templates").insert([templateData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  // Variable functions
+  async crearVariable(variableData: any) {
+    const { data, error } = await supabase.from("variables").insert([variableData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async actualizarVariable(id: string, variableData: any) {
+    const { data, error } = await supabase.from("variables").update(variableData).eq("id", id).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async eliminarVariable(id: string) {
+    const { error } = await supabase.from("variables").delete().eq("id", id)
+
+    if (error) throw error
+    return true
+  },
+
+  // Statistics functions
+  async getEstadisticas(userId: string) {
+    // Get counts from different tables
+    const [contactsCount, messagesCount, templatesCount, groupsCount] = await Promise.all([
+      supabase.from("contacts").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("messages").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("templates").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("groups").select("id", { count: "exact" }).eq("user_id", userId),
+    ])
+
+    // Get recent messages
+    const { data: recentMessages } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(name, phone)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    return {
+      contactsCount: contactsCount.count || 0,
+      messagesCount: messagesCount.count || 0,
+      templatesCount: templatesCount.count || 0,
+      groupsCount: groupsCount.count || 0,
+      recentMessages: recentMessages || [],
+    }
+  },
+
+  // User functions
+  async getUsers() {
+    const { data, error } = await supabase.from("users").select("*")
+
+    if (error) throw error
+    return data
+  },
+
+  // Activity logs
+  async registrarActividad(logData: any) {
+    const { data, error } = await supabase.from("activity_logs").insert([logData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async getActivityLogs(userId: string) {
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+
+  // Add any other functions your application needs
 }
 

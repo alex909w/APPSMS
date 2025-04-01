@@ -58,15 +58,15 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
-    "prisma": "latest",
     "@auth/core": "latest",
     "nodemailer": "latest",
+    "prisma": "latest",
     "@supabase/supabase-js": "latest",
-    "@prisma/client": "latest",
     "next-auth": "latest",
     "fs": "latest",
     "path": "latest",
-    "bcryptjs": "latest"
+    "bcryptjs": "latest",
+    "@prisma/client": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

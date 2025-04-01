@@ -64,6 +64,8 @@
     "@supabase/supabase-js": "latest",
     "@prisma/client": "latest",
     "next-auth": "latest",
+    "fs": "latest",
+    "path": "latest",
     "bcryptjs": "latest"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import { supabase } from "./supabase"
 import { db } from "./db"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { compare } from "bcrypt"
+import { compare } from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
   pages: {

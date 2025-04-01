@@ -1,45 +1,62 @@
 import { NextResponse } from "next/server"
-import { getContactos, crearContacto, registrarActividad } from "@/lib/db"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
 
 export async function GET() {
   try {
-    const contactos = await getContactos()
-    return NextResponse.json({ contactos })
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { data, error } = await supabase.from("contacts").select("*").eq("user_id", session.user.id).order("name")
+
+    if (error) {
+      console.error("Error fetching contacts:", error)
+      return NextResponse.json({ error: "Failed to fetch contacts" }, { status: 500 })
+    }
+
+    return NextResponse.json(data)
   } catch (error) {
-    console.error("Error al obtener contactos:", error)
-    return NextResponse.json({ error: "Error al obtener contactos" }, { status: 500 })
+    console.error("Error in contacts API:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { telefono, nombre, apellido, correo } = await request.json()
+    const session = await getServerSession(authOptions)
 
-    if (!telefono || !nombre) {
-      return NextResponse.json({ error: "Teléfono y nombre son requeridos" }, { status: 400 })
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Crear contacto
-    const resultado = await crearContacto(telefono, nombre, apellido || "", correo || "")
+    const body = await request.json()
 
-    // Registrar actividad
-    await registrarActividad(
-      null, // usuarioId (null para sistema)
-      "create_contact",
-      `Contacto creado: ${nombre} ${apellido || ""} (${telefono})`,
-      request.headers.get("x-forwarded-for") || "127.0.0.1",
-    )
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert([
+        {
+          user_id: session.user.id,
+          name: body.name,
+          phone: body.phone,
+          email: body.email || null,
+          notes: body.notes || null,
+        },
+      ])
+      .select()
 
-    return NextResponse.json(
-      {
-        message: "Contacto creado exitosamente",
-        id: resultado.insertId,
-      },
-      { status: 201 },
-    )
+    if (error) {
+      console.error("Error creating contact:", error)
+      return NextResponse.json({ error: "Failed to create contact" }, { status: 500 })
+    }
+
+    return NextResponse.json(data[0])
   } catch (error) {
-    console.error("Error al crear contacto:", error)
-    return NextResponse.json({ error: "Error al crear contacto" }, { status: 500 })
+    console.error("Error in contacts API:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
 

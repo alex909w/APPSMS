@@ -1,7 +1,11 @@
 {
-  "name": "my-v0-project",
+  "name": "appsms",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -24,7 +28,7 @@
     "@radix-ui/react-menubar": "^1.1.4",
     "@radix-ui/react-navigation-menu": "^1.2.3",
     "@radix-ui/react-popover": "^1.1.4",
-    "@radix-ui/react-progress": "latest",
+    "@radix-ui/react-progress": "^1.0.3",
     "@radix-ui/react-radio-group": "^1.2.2",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-select": "^2.1.4",
@@ -38,7 +42,7 @@
     "@radix-ui/react-toggle-group": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.6",
     "autoprefixer": "^10.4.20",
-    "bcryptjs": "latest",
+    "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
@@ -46,14 +50,14 @@
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "mysql2": "latest",
+    "mysql2": "^3.9.2",
     "next": "15.1.0",
     "next-auth": "^4.24.11",
-    "next-themes": "latest",
-    "pg": "^8.14.1",
-    "react": "^19",
+    "next-themes": "^0.3.0",
+    "pg": "^8.11.3",
+    "react": "^19.0.0",
     "react-day-picker": "8.10.1",
-    "react-dom": "^19",
+    "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.1",
     "react-icons": "^5.5.0",
     "react-resizable-panels": "^2.1.7",
@@ -65,11 +69,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
-    "@types/react": "^19.0.12",
-    "@types/react-dom": "^19",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.2"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.11.30",
+    "@types/pg": "^8.10.9",
+    "@types/react": "^18.2.67",
+    "@types/react-dom": "^18.2.22",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.3"
   }
 }

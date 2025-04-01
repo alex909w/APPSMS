@@ -36,11 +36,15 @@ export async function getMessageTemplates() {
 }
 
 // Crear plantilla de mensaje
-export async function crearPlantilla(data: { nombre: string; contenido: string }) {
-  return executeQuery<any>("INSERT INTO plantillas_mensaje (nombre, contenido) VALUES ($1, $2) RETURNING *", [
-    data.nombre,
-    data.contenido,
-  ])
+export async function crearPlantilla(data: { 
+  nombre: string; 
+  contenido: string; 
+  descripcion?: string 
+}) {
+  return executeQuery<any>(
+    "INSERT INTO plantillas_mensaje (nombre, contenido, descripcion) VALUES ($1, $2, $3) RETURNING *",
+    [data.nombre, data.contenido, data.descripcion || null]
+  );
 }
 
 // Actualizar plantilla de mensaje

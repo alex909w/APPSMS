@@ -37,13 +37,14 @@ export async function getMessageTemplates() {
 
 // Crear plantilla de mensaje
 export async function crearPlantilla(data: { 
-  nombre: string; 
-  contenido: string; 
-  descripcion?: string 
+  nombre: string;
+  contenido: string;
+  descripcion?: string;
+  creado_por?: number;
 }) {
   return executeQuery<any>(
-    "INSERT INTO plantillas_mensaje (nombre, contenido, descripcion) VALUES ($1, $2, $3) RETURNING *",
-    [data.nombre, data.contenido, data.descripcion || null]
+    "INSERT INTO plantillas_mensaje (nombre, contenido, descripcion, creado_por) VALUES ($1, $2, $3, $4) RETURNING *",
+    [data.nombre, data.contenido, data.descripcion || null, data.creado_por || null]
   );
 }
 
@@ -330,16 +331,28 @@ export async function actualizarConfiguracion(data: { [key: string]: any }) {
 
 // Registro de actividad
 export async function registrarActividad(data: {
-  tipo: string
-  descripcion: string
-  usuario_id?: string
-  entidad_id?: string
-  entidad_tipo?: string
+  usuario_id?: number;
+  accion: string;  // Corresponde a la columna 'tipo' en la BD
+  tipo_entidad?: string;
+  entidad_id?: number;
+  descripcion?: string;
+  direccion_ip?: string;
+  agente_usuario?: string;
 }) {
   return executeQuery<any>(
-    `INSERT INTO actividad_log (tipo, descripcion, usuario_id, entidad_id, entidad_tipo, fecha) 
-     VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
-    [data.tipo, data.descripcion, data.usuario_id || null, data.entidad_id || null, data.entidad_tipo || null],
+    `INSERT INTO registros_actividad 
+     (usuario_id, accion, tipo_entidad, entidad_id, descripcion, direccion_ip, agente_usuario) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7) 
+     RETURNING *`,
+    [
+      data.usuario_id || null,
+      data.accion,
+      data.tipo_entidad || null,
+      data.entidad_id || null,
+      data.descripcion || null,
+      data.direccion_ip || null,
+      data.agente_usuario || null
+    ]
   )
 }
 

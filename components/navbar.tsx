@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { Bell, Moon, Sun, User, Settings, HelpCircle, LogOut } from "lucide-react"
-import { useTheme } from "next-themes"
-import { Button } from "@/components/ui/button"
+import { Bell, Moon, Sun, User, Settings, HelpCircle, LogOut } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,17 +10,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import Link from "next/link"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 export function Navbar() {
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme } = useTheme();
 
   return (
     <div className="border-b bg-white dark:bg-gray-950 dark:border-gray-800">
       <div className="flex h-16 items-center px-4">
         <div className="ml-auto flex items-center gap-4">
+          {/* Botón de Notificaciones */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
@@ -34,11 +35,20 @@ export function Navbar() {
               <DropdownMenuItem>No hay notificaciones nuevas</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+
+          {/* Botón de Cambio de Tema */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Cambiar tema</span>
           </Button>
+
+          {/* Menú de Usuario */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -57,26 +67,29 @@ export function Navbar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile">
+                <Link href="/profile" className="flex items-center">
                   <User className="mr-2 h-4 w-4" />
                   <span>Perfil</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings">
+                <Link href="/settings" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Configuración</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/help">
+                <Link href="/help" className="flex items-center">
                   <HelpCircle className="mr-2 h-4 w-4" />
                   <span>Ayuda</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/" className="text-red-600 focus:text-red-600">
+                <Link 
+                  href="/" 
+                  className="flex items-center text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cerrar Sesión</span>
                 </Link>
@@ -86,5 +99,5 @@ export function Navbar() {
         </div>
       </div>
     </div>
-  )
+  );
 }

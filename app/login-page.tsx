@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const { login, loginWithProvider, isLoading } = useAuth();
@@ -122,7 +123,7 @@ export default function LoginPage() {
                 onClick={() => loginWithProvider("google")}
                 disabled={isLoading}
               >
-                <Image src="/placeholder.svg?height=16&width=16" width={16} height={16} alt="Google" className="mr-2" />
+                <FcGoogle className="w-5 h-5" />
                 Google
               </Button>
               <Button

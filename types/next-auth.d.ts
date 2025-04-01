@@ -10,7 +10,7 @@ declare module "next-auth" {
 
   interface User {
     id: string
-    role?: string
+    role: string
   }
 }
 
@@ -20,3 +20,4 @@ declare module "next-auth/jwt" {
     role: string
   }
 }
+

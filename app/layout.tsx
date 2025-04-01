@@ -2,7 +2,6 @@ import type React from "react"
 import { Inter } from "next/font/google"
 import { Providers } from "./providers"
 import "./globals.css"
-import ClientLayout from "./ClientLayout"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -16,7 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className={inter.className}>
         <Providers>
-          <ClientLayout>{children}</ClientLayout>
+          {/* Eliminamos el ClientLayout que probablemente contiene el nav/sidebar */}
+          <div className="min-h-screen bg-background">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>

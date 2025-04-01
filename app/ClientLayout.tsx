@@ -24,11 +24,11 @@ export default function ClientLayout({ children }: Props) {
     return null // Evita errores de hidratación en SSR
   }
 
-  const isLoginPage = pathname === "/login" // Solo ocultar navbar y sidebar en login
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname.startsWith("/auth/")
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      {isLoginPage ? (
+      {isAuthPage ? (
         <div className="min-h-screen flex items-center justify-center">{children}</div>
       ) : (
         <div className="flex min-h-screen">
@@ -45,3 +45,4 @@ export default function ClientLayout({ children }: Props) {
     </ThemeProvider>
   )
 }
+

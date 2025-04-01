@@ -1,114 +1,88 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { supabase } from "@/lib/supabase"
+import { eliminarPlantilla, actualizarPlantilla, registrarActividad, executeQuery } from "@/lib/db"
 
+// Get a specific template
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    // Aseguramos que params.id se use correctamente
+    const id = params.id
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    // Validamos que sea un número válido antes de usarlo en la consulta
+    const numericId = Number.parseInt(id)
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from("templates")
-      .select("*")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
+    const plantilla = await executeQuery<any[]>(`SELECT * FROM plantillas_mensaje WHERE id = ?`, [numericId])
 
-    if (error) {
-      console.error("Error fetching template:", error)
-      return NextResponse.json({ error: "Failed to fetch template" }, { status: 500 })
+    if (!plantilla || plantilla.length === 0) {
+      return NextResponse.json({ error: "Plantilla no encontrada" }, { status: 404 })
     }
 
-    if (!data) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json({ plantilla: plantilla[0] })
   } catch (error) {
-    console.error("Error in template API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener plantilla:", error)
+    return NextResponse.json({ error: "Error al obtener plantilla" }, { status: 500 })
   }
 }
 
+// Update a template
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const id = params.id
+    const numericId = Number.parseInt(id)
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const body = await request.json()
+    const { nombre, contenido, descripcion } = await request.json()
 
-    // First check if the template belongs to the user
-    const { data: existingTemplate, error: fetchError } = await supabase
-      .from("templates")
-      .select("id")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
-
-    if (fetchError || !existingTemplate) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
+    if (!nombre || !contenido) {
+      return NextResponse.json({ error: "Nombre y contenido son requeridos" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from("templates")
-      .update({
-        name: body.name,
-        content: body.content,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-      .select()
+    await actualizarPlantilla(numericId, nombre, contenido, descripcion || "")
 
-    if (error) {
-      console.error("Error updating template:", error)
-      return NextResponse.json({ error: "Failed to update template" }, { status: 500 })
-    }
+    // Registrar actividad
+    await registrarActividad(
+      null, // usuarioId (null para sistema)
+      "update_template",
+      `Plantilla actualizada: ${nombre}`,
+      request.headers.get("x-forwarded-for") || "127.0.0.1",
+    )
 
-    return NextResponse.json(data[0])
+    return NextResponse.json({ message: "Plantilla actualizada exitosamente" })
   } catch (error) {
-    console.error("Error in template API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al actualizar plantilla:", error)
+    return NextResponse.json({ error: "Error al actualizar plantilla" }, { status: 500 })
   }
 }
 
+// Delete a template
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const id = params.id
+    const numericId = Number.parseInt(id)
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    // First check if the template belongs to the user
-    const { data: existingTemplate, error: fetchError } = await supabase
-      .from("templates")
-      .select("id")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
+    await eliminarPlantilla(numericId)
 
-    if (fetchError || !existingTemplate) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 })
-    }
+    // Registrar actividad
+    await registrarActividad(
+      null, // usuarioId (null para sistema)
+      "delete_template",
+      `Plantilla eliminada: ID ${id}`,
+      request.headers.get("x-forwarded-for") || "127.0.0.1",
+    )
 
-    const { error } = await supabase.from("templates").delete().eq("id", params.id)
-
-    if (error) {
-      console.error("Error deleting template:", error)
-      return NextResponse.json({ error: "Failed to delete template" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ message: "Plantilla eliminada exitosamente" })
   } catch (error) {
-    console.error("Error in template API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al eliminar plantilla:", error)
+    return NextResponse.json({ error: "Error al eliminar plantilla" }, { status: 500 })
   }
 }
 

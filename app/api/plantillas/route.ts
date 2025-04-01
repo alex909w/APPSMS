@@ -1,60 +1,45 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { supabase } from "@/lib/supabase"
+import { getPlantillasMensaje, registrarActividad, crearPlantilla } from "@/lib/db"
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { data, error } = await supabase.from("templates").select("*").eq("user_id", session.user.id).order("name")
-
-    if (error) {
-      console.error("Error fetching templates:", error)
-      return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+    const plantillas = await getPlantillasMensaje()
+    return NextResponse.json({ plantillas })
   } catch (error) {
-    console.error("Error in templates API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener plantillas:", error)
+    return NextResponse.json({ error: "Error al obtener plantillas" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const { nombre, contenido, descripcion } = await request.json()
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!nombre || !contenido) {
+      return NextResponse.json({ error: "Nombre y contenido son requeridos" }, { status: 400 })
     }
 
-    const body = await request.json()
+    // Crear plantilla
+    const resultado = await crearPlantilla(nombre, contenido, descripcion || "")
 
-    const { data, error } = await supabase
-      .from("templates")
-      .insert([
-        {
-          user_id: session.user.id,
-          name: body.name,
-          content: body.content,
-        },
-      ])
-      .select()
+    // Registrar actividad
+    await registrarActividad(
+      null, // usuarioId (null para sistema)
+      "create_template",
+      `Plantilla creada: ${nombre}`,
+      request.headers.get("x-forwarded-for") || "127.0.0.1",
+    )
 
-    if (error) {
-      console.error("Error creating template:", error)
-      return NextResponse.json({ error: "Failed to create template" }, { status: 500 })
-    }
-
-    return NextResponse.json(data[0])
+    return NextResponse.json(
+      {
+        message: "Plantilla creada exitosamente",
+        id: resultado.insertId,
+      },
+      { status: 201 },
+    )
   } catch (error) {
-    console.error("Error in templates API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al crear plantilla:", error)
+    return NextResponse.json({ error: "Error al crear plantilla" }, { status: 500 })
   }
 }
 

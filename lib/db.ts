@@ -49,32 +49,32 @@ export async function crearPlantilla(data: {
 }
 
 // Actualizar plantilla de mensaje
-export async function actualizarPlantilla(id: string, data: { nombre?: string; contenido?: string }) {
-  const updates = []
-  const values = []
-
-  if (data.nombre) {
-    updates.push(`nombre = $${updates.length + 1}`)
-    values.push(data.nombre)
+export async function actualizarPlantilla(data: {
+  id: number;
+  nombre: string;
+  contenido: string;
+  descripcion?: string | null;
+}) {
+  // Validación básica
+  if (!data.nombre || !data.contenido) {
+    throw new Error("Nombre y contenido son requeridos")
   }
 
-  if (data.contenido) {
-    updates.push(`contenido = $${updates.length + 1}`)
-    values.push(data.contenido)
-  }
-
-  if (updates.length === 0) return null
-
-  values.push(id)
   return executeQuery<any>(
-    `UPDATE plantillas_mensaje SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`,
-    values,
+    `UPDATE plantillas_mensaje 
+     SET nombre = $1, contenido = $2, descripcion = $3, fecha_actualizacion = CURRENT_TIMESTAMP
+     WHERE id = $4
+     RETURNING *`,
+    [data.nombre, data.contenido, data.descripcion || null, data.id]
   )
 }
 
 // Eliminar plantilla de mensaje
-export async function eliminarPlantilla(id: string) {
-  return executeQuery<any>("DELETE FROM plantillas_mensaje WHERE id = $1 RETURNING *", [id])
+export async function eliminarPlantilla(id: number) {
+  return executeQuery<any>(
+    "DELETE FROM plantillas_mensaje WHERE id = $1 RETURNING *",
+    [id]
+  )
 }
 
 // Crear plantilla de mensaje (alternativa)
@@ -82,6 +82,14 @@ export async function createMessageTemplate(data: { name: string; content: strin
   return executeQuery<any>(
     "INSERT INTO message_templates (name, content, creator_id) VALUES ($1, $2, $3) RETURNING *",
     [data.name, data.content, data.creator_id || null],
+  )
+}
+
+// Obtener detalles de Plantillas
+export async function getPlantillaById(id: number) {
+  return executeQuery<any>(
+    `SELECT * FROM plantillas_mensaje WHERE id = $1`,
+    [id]
   )
 }
 

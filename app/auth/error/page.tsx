@@ -1,65 +1,79 @@
 "use client"
 
+import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 
 export default function AuthErrorPage() {
   const searchParams = useSearchParams()
   const error = searchParams.get("error")
 
-  let errorMessage = "Ha ocurrido un error durante la autenticación."
+  useEffect(() => {
+    // Registrar el error para depuración
+    if (error) {
+      console.error("Error de autenticación:", error)
+    }
+  }, [error])
 
-  // Personalizar mensajes de error
-  switch (error) {
-    case "OAuthSignin":
-    case "OAuthCallback":
-    case "OAuthCreateAccount":
-    case "EmailCreateAccount":
-      errorMessage = "Hubo un problema con el proveedor de autenticación."
-      break
-    case "Callback":
-      errorMessage = "Hubo un problema durante el proceso de autenticación."
-      break
-    case "OAuthAccountNotLinked":
-      errorMessage = "Esta cuenta ya está vinculada a otro método de inicio de sesión."
-      break
-    case "EmailSignin":
-      errorMessage = "El enlace de inicio de sesión por correo electrónico no es válido o ha expirado."
-      break
-    case "CredentialsSignin":
-      errorMessage = "Las credenciales proporcionadas no son válidas."
-      break
-    case "SessionRequired":
-      errorMessage = "Debes iniciar sesión para acceder a esta página."
-      break
-    default:
-      errorMessage = "Ha ocurrido un error durante la autenticación."
+  // Mapeo de códigos de error a mensajes amigables
+  const getErrorMessage = (errorCode: string | null) => {
+    switch (errorCode) {
+      case "Configuration":
+        return "Hay un problema con la configuración del servidor de autenticación."
+      case "AccessDenied":
+        return "No tienes permiso para acceder a este recurso."
+      case "Verification":
+        return "El enlace de verificación ha expirado o ya ha sido utilizado."
+      case "OAuthSignin":
+        return "Error al iniciar el proceso de autenticación con el proveedor."
+      case "OAuthCallback":
+        return "Error al procesar la respuesta del proveedor de autenticación."
+      case "OAuthCreateAccount":
+        return "No se pudo crear una cuenta de usuario con el proveedor de autenticación."
+      case "EmailCreateAccount":
+        return "No se pudo crear una cuenta de usuario con el correo electrónico proporcionado."
+      case "Callback":
+        return "Error en el proceso de autenticación."
+      case "OAuthAccountNotLinked":
+        return "Este correo ya está asociado a otra cuenta. Inicia sesión con tu método habitual."
+      case "EmailSignin":
+        return "Error al enviar el correo de verificación."
+      case "CredentialsSignin":
+        return "Las credenciales proporcionadas no son válidas."
+      case "SessionRequired":
+        return "Debes iniciar sesión para acceder a este recurso."
+      default:
+        return "Se produjo un error durante el proceso de autenticación. Por favor, intenta de nuevo."
+    }
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <CardTitle>Error de autenticación</CardTitle>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-center mb-4">
+            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-300" />
             </div>
-            <CardDescription>Se ha producido un error durante el proceso de autenticación.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">{errorMessage}</p>
-          </CardContent>
-          <CardFooter>
-            <Button asChild className="w-full">
-              <Link href="/">Volver al inicio</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-center">Error de Autenticación</CardTitle>
+          <CardDescription className="text-center">{getErrorMessage(error)}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-center text-muted-foreground">
+            <p>Código de error: {error || "Desconocido"}</p>
+            <p className="mt-2">Si el problema persiste, por favor contacta al soporte técnico.</p>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Link href="/login">
+            <Button>Volver al inicio de sesión</Button>
+          </Link>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

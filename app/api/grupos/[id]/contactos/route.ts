@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server"
 import { agregarContactoAGrupo, eliminarContactoDeGrupo, registrarActividad } from "@/lib/db"
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const grupoId = Number.parseInt(params.id)
+    // Esperar a que los parámetros estén disponibles
+    const resolvedParams = await params
+    const grupoId = Number.parseInt(resolvedParams.id)
 
     if (isNaN(grupoId)) {
       return NextResponse.json({ error: "ID de grupo inválido" }, { status: 400 })
@@ -20,7 +22,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       await agregarContactoAGrupo(grupoId.toString(), contactId.toString())
     }
 
-    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    // Registrar actividad
     await registrarActividad({
       accion: "add_contacts_to_group",
       descripcion: `Se añadieron ${contactIds.length} contactos al grupo ${grupoId}`,
@@ -33,15 +35,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
       { status: 200 },
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al añadir contactos al grupo:", error)
-    return NextResponse.json({ error: "Error al añadir contactos al grupo" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error al añadir contactos al grupo" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const grupoId = Number.parseInt(params.id)
+    // Esperar a que los parámetros estén disponibles
+    const resolvedParams = await params
+    const grupoId = Number.parseInt(resolvedParams.id)
 
     if (isNaN(grupoId)) {
       return NextResponse.json({ error: "ID de grupo inválido" }, { status: 400 })
@@ -56,7 +60,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     // Eliminar el contacto del grupo
     await eliminarContactoDeGrupo(grupoId.toString(), contactId.toString())
 
-    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    // Registrar actividad
     await registrarActividad({
       accion: "remove_contact_from_group",
       descripcion: `Se eliminó el contacto ${contactId} del grupo ${grupoId}`,
@@ -69,9 +73,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       },
       { status: 200 },
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al eliminar contacto del grupo:", error)
-    return NextResponse.json({ error: "Error al eliminar contacto del grupo" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error al eliminar contacto del grupo" }, { status: 500 })
   }
 }
 

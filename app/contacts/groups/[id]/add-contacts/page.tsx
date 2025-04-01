@@ -10,13 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { use } from "react"
 
-export default function AddContactsToGroupPage({ params }: { params: { id: string } }) {
-  // Usamos React.use() para desenvolver params
-  const resolvedParams = use(params)
-  const id = resolvedParams.id
-
+export default function AddContactsToGroupPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string | null>(null)
   const [contactos, setContactos] = useState<any[]>([])
   const [selectedContactos, setSelectedContactos] = useState<number[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -26,9 +22,25 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
   const { toast } = useToast()
   const router = useRouter()
 
+  // Cargar el ID del grupo
+  useEffect(() => {
+    const loadParams = async () => {
+      try {
+        const resolvedParams = await params
+        setId(resolvedParams.id)
+      } catch (error) {
+        console.error("Error al cargar parámetros:", error)
+      }
+    }
+
+    loadParams()
+  }, [params])
+
   // Cargar contactos y detalles del grupo
   useEffect(() => {
     const fetchData = async () => {
+      if (!id) return
+
       try {
         // Cargar contactos
         const contactosResponse = await fetch("/api/contactos")
@@ -44,8 +56,10 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
       }
     }
 
-    fetchData()
-  }, [id]) // Ahora usamos id en lugar de params.id
+    if (id) {
+      fetchData()
+    }
+  }, [id])
 
   const handleToggleContact = (contactId: number) => {
     setSelectedContactos((prev) =>
@@ -54,6 +68,15 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
   }
 
   const handleAddContacts = async () => {
+    if (!id) {
+      toast({
+        title: "Error",
+        description: "ID de grupo no disponible",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (selectedContactos.length === 0) {
       toast({
         title: "Selecciona contactos",
@@ -103,9 +126,9 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
   // Filtrar contactos por término de búsqueda
   const filteredContactos = contactos.filter(
     (contacto) =>
-      contacto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contacto.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contacto.apellido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contacto.telefono.includes(searchTerm),
+      contacto.telefono?.includes(searchTerm),
   )
 
   return (
@@ -116,12 +139,14 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
           <p className="text-muted-foreground">Selecciona los contactos que deseas añadir al grupo</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/contacts/groups/${id}`}>
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver al Grupo
-            </Button>
-          </Link>
+          {id && (
+            <Link href={`/contacts/groups/${id}`}>
+              <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Volver al Grupo
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -205,3 +230,4 @@ export default function AddContactsToGroupPage({ params }: { params: { id: strin
     </div>
   )
 }
+

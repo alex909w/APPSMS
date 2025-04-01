@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     // Validar la tasa de éxito (entre 0 y 100)
     const tasa = tasaExito !== undefined ? Math.min(Math.max(Number(tasaExito), 0), 100) : 100
 
-    // Simular un pequeño retraso para cada mensaje
+    // Procesar cada contacto
     for (const contacto of grupo.miembros) {
       try {
         // Simular un pequeño retraso para cada mensaje
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
             contactoId: contacto.id,
             telefono: contacto.telefono,
             estado: estado,
-            mensajeId: resultado.insertId,
+            mensajeId: resultado.id, // Acceder directamente al ID del resultado
           })
         } else {
           // Simular un mensaje fallido
@@ -68,33 +68,38 @@ export async function POST(request: Request) {
             error: "Error simulado en el envío",
           })
         }
-      } catch (error) {
+      } catch (error: any) {
         resultados.fallidos++
         resultados.detalles.push({
           contactoId: contacto.id,
           telefono: contacto.telefono,
           estado: "fallido",
-          error: error.message,
+          error: error.message || "Error desconocido",
         })
       }
     }
 
     // Registrar actividad
-    await registrarActividad(
-      null, // usuarioId (null para sistema)
-      "send_bulk_sms",
-      `Envío masivo a grupo ${grupoId}: ${resultados.enviados} enviados, ${resultados.fallidos} fallidos`,
-      request.headers.get("x-forwarded-for") || "127.0.0.1",
-    )
+    await registrarActividad({
+      accion: "send_bulk_sms",
+      descripcion: `Envío masivo a grupo ${grupoId}: ${resultados.enviados} enviados, ${resultados.fallidos} fallidos`,
+      direccion_ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+    })
 
     return NextResponse.json({
       resultados,
       success: true,
       message: `Se han enviado ${resultados.enviados} mensajes exitosamente y fallaron ${resultados.fallidos} mensajes`,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error en envío masivo:", error)
-    return NextResponse.json({ error: "Error en envío masivo", success: false }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error.message || "Error en envío masivo",
+        success: false,
+      },
+      { status: 500 },
+    )
   }
 }
 

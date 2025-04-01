@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -28,9 +28,9 @@ export default function SendBulkSmsPage() {
   const [success, setSuccess] = useState<{ message: string; details: any } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const [templates, setTemplates] = useState([])
-  const [groups, setGroups] = useState([])
-  const [variables, setVariables] = useState([])
+  const [templates, setTemplates] = useState<any[]>([])
+  const [groups, setGroups] = useState<any[]>([])
+  const [variables, setVariables] = useState<any[]>([])
 
   // Añadir estados para la simulación
   const [estadoSimulado, setEstadoSimulado] = useState("enviado")
@@ -72,7 +72,9 @@ export default function SendBulkSmsPage() {
     fetchData()
   }, [toast])
 
-  // Actualizar mensaje cuando se selecciona una plantilla
+  // Modificar el useEffect que actualiza el mensaje cuando se selecciona una plantilla
+  // Reemplazar este useEffect:
+
   useEffect(() => {
     if (selectedTemplate && selectedTemplate !== "none") {
       const template = templates.find((t) => t.id.toString() === selectedTemplate)
@@ -91,10 +93,13 @@ export default function SendBulkSmsPage() {
           newVariableValues[varName] = variableValues[varName] || ""
         })
 
-        setVariableValues(newVariableValues)
+        // Evitar actualizar el estado si no hay cambios
+        if (JSON.stringify(newVariableValues) !== JSON.stringify(variableValues)) {
+          setVariableValues(newVariableValues)
+        }
       }
     }
-  }, [selectedTemplate, templates])
+  }, [selectedTemplate, templates]) // Eliminar variableValues de las dependencias
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -130,7 +135,8 @@ export default function SendBulkSmsPage() {
       const response = await fetch(`/api/grupos/${selectedGroup}`)
 
       if (!response.ok) {
-        throw new Error("Error al obtener contactos del grupo")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al obtener contactos del grupo")
       }
 
       const data = await response.json()
@@ -174,7 +180,7 @@ export default function SendBulkSmsPage() {
         body: JSON.stringify({
           grupoId: selectedGroup,
           mensaje: finalMessage,
-          plantillaId: selectedTemplate && selectedTemplate !== "none" ? Number.parseInt(selectedTemplate) : null,
+          plantillaId: selectedTemplate && selectedTemplate !== "none" ? selectedTemplate : null,
           variablesUsadas: variableValues,
           estadoSimulado, // Añadir el estado simulado
           tasaExito, // Añadir la tasa de éxito
@@ -216,16 +222,27 @@ export default function SendBulkSmsPage() {
     }
   }
 
-  // Extraer variables del mensaje actual
-  const extractVariables = () => {
+  // Modificar la función extractVariables para evitar cálculos innecesarios durante el renderizado
+
+  // Reemplazar esta función:
+  // const extractVariables = () => {
+  //   const regex = /<([^>]+)>/g
+  //   const matches = message.match(regex) || []
+  //   // Usar Set para eliminar duplicados
+  //   const uniqueVars = new Set(matches.map((match) => match.replace(/<|>/g, "")))
+  //   return Array.from(uniqueVars)
+  // }
+
+  // const messageVariables = extractVariables()
+
+  // Con esta implementación usando useMemo:
+  const messageVariables = useMemo(() => {
     const regex = /<([^>]+)>/g
     const matches = message.match(regex) || []
     // Usar Set para eliminar duplicados
     const uniqueVars = new Set(matches.map((match) => match.replace(/<|>/g, "")))
     return Array.from(uniqueVars)
-  }
-
-  const messageVariables = extractVariables()
+  }, [message])
 
   // Modificar la función handleInsertVariable para mostrar una alerta en lugar de un toast
   const handleInsertVariable = (variableName: string) => {
@@ -515,3 +532,4 @@ export default function SendBulkSmsPage() {
     </div>
   )
 }
+

@@ -222,34 +222,46 @@ export async function getGruposContacto() {
 }
 
 // Obtener detalles de un grupo
-export async function getDetallesGrupo(id: string) {
-  const grupo = await executeQuery<any[]>(`SELECT * FROM grupos_contacto WHERE id = $1`, [id])
+export async function getDetallesGrupo(grupoId: number): Promise<any> {
+  try {
+    // Obtener información básica del grupo
+    const grupo = await executeQuery<any[]>(`SELECT * FROM grupos_contacto WHERE id = $1`, [grupoId])
 
-  if (grupo.length === 0) return null
+    if (grupo.length === 0) return null
 
-  const contactos = await executeQuery<any[]>(
-    `SELECT c.* 
-     FROM contactos c
-     JOIN miembros_grupo mg ON c.id = mg.contacto_id
-     WHERE mg.grupo_id = $1`,
-    [id],
-  )
+    // Obtener los contactos asociados al grupo
+    const miembros = await executeQuery<any[]>(
+      `SELECT c.* 
+       FROM contactos c
+       JOIN miembros_grupo mg ON c.id = mg.contacto_id
+       WHERE mg.grupo_id = $1`,
+      [grupoId],
+    )
 
-  return {
-    ...grupo[0],
-    contactos,
+    // Devolver el grupo con sus miembros
+    return {
+      ...grupo[0],
+      miembros: miembros || [],
+    }
+  } catch (error) {
+    console.error("Error al obtener detalles del grupo:", error)
+    throw error
   }
 }
 
 // Agregar contacto a grupo
-export async function agregarContactoAGrupo(grupoId: string, contactoId: string) {
-  return executeQuery<any>(
-    `INSERT INTO miembros_grupo (grupo_id, contacto_id) 
-     VALUES ($1, $2) 
-     ON CONFLICT (grupo_id, contacto_id) DO NOTHING
-     RETURNING *`,
-    [grupoId, contactoId],
-  )
+export async function agregarContactoAGrupo(grupoId: string, contactoId: string): Promise<void> {
+  try {
+    await executeQuery(
+      `INSERT INTO miembros_grupo (grupo_id, contacto_id) 
+       VALUES ($1, $2) 
+       ON CONFLICT (grupo_id, contacto_id) DO NOTHING`,
+      [grupoId, contactoId],
+    )
+  } catch (error) {
+    console.error(`Error al agregar contacto ${contactoId} al grupo ${grupoId}:`, error)
+    throw error
+  }
 }
 
 // Eliminar contacto de grupo

@@ -11,13 +11,9 @@ import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { use } from "react"
 
-export default function EditGroupPage({ params }: { params: { id: string } }) {
-  // Usamos React.use() para desenvolver params
-  const resolvedParams = use(params)
-  const id = resolvedParams.id
-
+export default function EditGroupPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string | null>(null)
   const [nombre, setNombre] = useState("")
   const [descripcion, setDescripcion] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -26,9 +22,25 @@ export default function EditGroupPage({ params }: { params: { id: string } }) {
   const { toast } = useToast()
   const router = useRouter()
 
+  // Cargar el ID del grupo
+  useEffect(() => {
+    const loadParams = async () => {
+      try {
+        const resolvedParams = await params
+        setId(resolvedParams.id)
+      } catch (error) {
+        console.error("Error al cargar parámetros:", error)
+      }
+    }
+
+    loadParams()
+  }, [params])
+
   // Cargar datos del grupo
   useEffect(() => {
     const fetchGroup = async () => {
+      if (!id) return
+
       try {
         setIsLoadingData(true)
         const response = await fetch(`/api/grupos/${id}`)
@@ -58,10 +70,20 @@ export default function EditGroupPage({ params }: { params: { id: string } }) {
     if (id) {
       fetchGroup()
     }
-  }, [id, toast]) // Ahora usamos id en lugar de params.id
+  }, [id, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!id) {
+      toast({
+        title: "Error",
+        description: "ID de grupo no disponible",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
@@ -120,12 +142,14 @@ export default function EditGroupPage({ params }: { params: { id: string } }) {
           <h2 className="text-2xl font-bold tracking-tight">Editar Grupo</h2>
           <p className="text-muted-foreground">Actualiza la información del grupo</p>
         </div>
-        <Link href={`/contacts/groups/${id}`}>
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver al Grupo
-          </Button>
-        </Link>
+        {id && (
+          <Link href={`/contacts/groups/${id}`}>
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver al Grupo
+            </Button>
+          </Link>
+        )}
       </div>
 
       <Card className="max-w-2xl mx-auto">

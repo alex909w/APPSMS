@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server"
 import { getDetallesGrupo, executeQuery, registrarActividad } from "@/lib/db"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const grupoId = Number.parseInt(params.id)
+    // Esperar a que los parámetros estén disponibles
+    const resolvedParams = await params
+    const grupoId = Number.parseInt(resolvedParams.id)
 
     if (isNaN(grupoId)) {
       return NextResponse.json({ error: "ID de grupo inválido" }, { status: 400 })
@@ -16,24 +18,26 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     return NextResponse.json({ grupo })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al obtener detalles del grupo:", error)
-    return NextResponse.json({ error: "Error al obtener detalles del grupo" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error al obtener detalles del grupo" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const grupoId = Number.parseInt(params.id)
+    // Esperar a que los parámetros estén disponibles
+    const resolvedParams = await params
+    const grupoId = Number.parseInt(resolvedParams.id)
 
     if (isNaN(grupoId)) {
       return NextResponse.json({ error: "ID de grupo inválido" }, { status: 400 })
     }
 
-    // Eliminar el grupo - CORREGIDO: Cambiado de ? a $1 para PostgreSQL
+    // Eliminar el grupo
     await executeQuery<any>(`DELETE FROM grupos_contacto WHERE id = $1`, [grupoId])
 
-    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    // Registrar actividad
     await registrarActividad({
       accion: "delete_group",
       descripcion: `Se eliminó el grupo ${grupoId}`,
@@ -46,15 +50,17 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       },
       { status: 200 },
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al eliminar grupo:", error)
-    return NextResponse.json({ error: "Error al eliminar grupo" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error al eliminar grupo" }, { status: 500 })
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const grupoId = Number.parseInt(params.id)
+    // Esperar a que los parámetros estén disponibles
+    const resolvedParams = await params
+    const grupoId = Number.parseInt(resolvedParams.id)
 
     if (isNaN(grupoId)) {
       return NextResponse.json({ error: "ID de grupo inválido" }, { status: 400 })
@@ -66,14 +72,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
     }
 
-    // Actualizar el grupo - CORREGIDO: Cambiado de ? a $1, $2, $3 para PostgreSQL
+    // Actualizar el grupo
     await executeQuery<any>(`UPDATE grupos_contacto SET nombre = $1, descripcion = $2 WHERE id = $3`, [
       nombre,
       descripcion || "",
       grupoId,
     ])
 
-    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    // Registrar actividad
     await registrarActividad({
       accion: "update_group",
       descripcion: `Se actualizó el grupo ${grupoId}`,
@@ -86,9 +92,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       },
       { status: 200 },
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al actualizar grupo:", error)
-    return NextResponse.json({ error: "Error al actualizar grupo" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error al actualizar grupo" }, { status: 500 })
   }
 }
 

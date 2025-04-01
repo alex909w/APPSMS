@@ -6,18 +6,17 @@ import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { notFound } from "next/navigation"
-import { use } from "react"
 
-export default function GroupDetailsPage({ params }: { params: { id: string } }) {
-  // Usamos React.use() como sugiere el mensaje de error
-  const id = use(Promise.resolve(params.id))
+export default async function GroupDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  // Esperar a que los parámetros estén disponibles
+  const resolvedParams = await params
+  const id = resolvedParams.id
 
   if (!id) {
     notFound()
   }
 
-  const groupPromise = getDetallesGrupo(Number.parseInt(id))
-  const grupo = use(groupPromise)
+  const grupo = await getDetallesGrupo(Number.parseInt(id))
 
   if (!grupo) {
     notFound()

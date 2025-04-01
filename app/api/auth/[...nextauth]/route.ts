@@ -8,7 +8,6 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
-    // Puedes agregar más proveedores aquí si necesitas
   ],
 
   callbacks: {
@@ -18,37 +17,31 @@ export const authOptions = {
           const email = user.email
           const name = user.name || profile?.name || email?.split('@')[0]
           
-          if (!email) return false
+          if (!email) {
+            throw new Error("No se pudo obtener el email de Google")
+          }
 
-          // 1. Verificar si el usuario ya existe
-          const existingUser = await executeQuery<any[]>(
-            "SELECT * FROM users WHERE email = $1 LIMIT 1",
-            [email]
+          // Verificar y actualizar usuario
+          const result = await executeQuery<any>(
+            `INSERT INTO users (name, email, provider, provider_id, email_verified) 
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (email) 
+             DO UPDATE SET 
+               name = EXCLUDED.name,
+               provider = EXCLUDED.provider,
+               provider_id = EXCLUDED.provider_id,
+               email_verified = EXCLUDED.email_verified
+             RETURNING *`,
+            [name, email, 'google', user.id, true]
           )
 
-          // 2. Si no existe, crear nuevo usuario
-          if (existingUser.length === 0) {
-            await executeQuery(
-              `INSERT INTO users (name, email, provider, provider_id, email_verified) 
-               VALUES ($1, $2, $3, $4, $5)`,
-              [name, email, 'google', user.id, true]
-            )
-          } else {
-            // 3. Si existe, actualizar información
-            await executeQuery(
-              `UPDATE users SET 
-                name = $1, 
-                provider = $2, 
-                provider_id = $3, 
-                email_verified = $4 
-               WHERE email = $5`,
-              [name, 'google', user.id, true, email]
-            )
+          if (!result || result.length === 0) {
+            throw new Error("Error al guardar usuario en la base de datos")
           }
-          
+
           return true
         } catch (error) {
-          console.error("Error al guardar usuario de Google:", error)
+          console.error("Error en el proceso de autenticación:", error)
           return false
         }
       }
@@ -86,5 +79,4 @@ export const authOptions = {
 }
 
 const handler = NextAuth(authOptions)
-
 export { handler as GET, handler as POST }

@@ -1,419 +1,469 @@
-import mysql from "mysql2/promise"
+import { supabase } from "./supabase"
 
-// Configuración de la conexión a la base de datos
-const dbConfig = {
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "", // Contraseña vacía para entorno local
-  database: process.env.DB_NAME || "app_sms",
+// Supabase database helper functions
+export const db = {
+  // Users
+  async getUser(id: string) {
+    const { data, error } = await supabase.from("users").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getUserByEmail(email: string) {
+    const { data, error } = await supabase.from("users").select("*").eq("email", email).single()
+
+    if (error && error.code !== "PGRST116") throw error
+    return data
+  },
+
+  async createUser(userData: any) {
+    const { data, error } = await supabase.from("users").insert([userData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  // Contacts
+  async getContacts(userId: string) {
+    const { data, error } = await supabase.from("contacts").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getContact(id: string) {
+    const { data, error } = await supabase.from("contacts").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  async createContact(contactData: any) {
+    const { data, error } = await supabase.from("contacts").insert([contactData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async updateContact(id: string, contactData: any) {
+    const { data, error } = await supabase.from("contacts").update(contactData).eq("id", id).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async deleteContact(id: string) {
+    const { error } = await supabase.from("contacts").delete().eq("id", id)
+
+    if (error) throw error
+    return true
+  },
+
+  // Groups
+  async getGroups(userId: string) {
+    const { data, error } = await supabase.from("groups").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getGroup(id: string) {
+    const { data, error } = await supabase.from("groups").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  // Messages
+  async getMessages(userId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+
+  async getMessage(id: string) {
+    const { data, error } = await supabase.from("messages").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  // Templates
+  async getTemplates(userId: string) {
+    const { data, error } = await supabase.from("templates").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getTemplate(id: string) {
+    const { data, error } = await supabase.from("templates").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  // Variables
+  async getVariables(userId: string) {
+    const { data, error } = await supabase.from("variables").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getVariable(id: string) {
+    const { data, error } = await supabase.from("variables").select("*").eq("id", id).single()
+
+    if (error) throw error
+    return data
+  },
+
+  // Additional functions needed by your application
+  async executeQuery(query: string, params: any[] = []) {
+    // This is a compatibility function for raw SQL queries
+    // In Supabase, we can use the rpc function for stored procedures
+    // or the .from().select() for most queries
+    try {
+      const { data, error } = await supabase.rpc("execute_query", {
+        query_text: query,
+        params_array: params,
+      })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error executing query:", error)
+      throw error
+    }
+  },
+
+  // Configuration functions
+  async actualizarConfiguracion(userId: string, config: any) {
+    // Check if configuration exists
+    const { data: existingConfig } = await supabase.from("configuration").select("*").eq("user_id", userId).single()
+
+    if (existingConfig) {
+      // Update existing configuration
+      const { data, error } = await supabase.from("configuration").update(config).eq("user_id", userId).select()
+
+      if (error) throw error
+      return data[0]
+    } else {
+      // Create new configuration
+      const { data, error } = await supabase
+        .from("configuration")
+        .insert([{ user_id: userId, ...config }])
+        .select()
+
+      if (error) throw error
+      return data[0]
+    }
+  },
+
+  // Contact functions
+  async crearContacto(contactData: any) {
+    const { data, error } = await supabase.from("contacts").insert([contactData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async getContactos(userId: string) {
+    const { data, error } = await supabase.from("contacts").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  // Group functions
+  async getDetallesGrupo(groupId: string) {
+    const { data, error } = await supabase
+      .from("groups")
+      .select(`
+        *,
+        contacts:group_contacts(
+          contact:contacts(*)
+        )
+      `)
+      .eq("id", groupId)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getGruposContacto(contactId: string) {
+    const { data, error } = await supabase
+      .from("group_contacts")
+      .select(`
+        group:groups(*)
+      `)
+      .eq("contact_id", contactId)
+
+    if (error) throw error
+    return data.map((item) => item.group)
+  },
+
+  async agregarContactoAGrupo(groupId: string, contactId: string) {
+    const { data, error } = await supabase
+      .from("group_contacts")
+      .insert([{ group_id: groupId, contact_id: contactId }])
+      .select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async eliminarContactoDeGrupo(groupId: string, contactId: string) {
+    const { error } = await supabase.from("group_contacts").delete().eq("group_id", groupId).eq("contact_id", contactId)
+
+    if (error) throw error
+    return true
+  },
+
+  // Message functions
+  async getMensajesEnviados(userId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(*),
+        template:templates(*)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+
+  async getMensajeById(messageId: string) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(*),
+        template:templates(*)
+      `)
+      .eq("id", messageId)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async enviarMensaje(messageData: any) {
+    const { data, error } = await supabase.from("messages").insert([messageData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  // Template functions
+  async getMessageTemplates(userId: string) {
+    const { data, error } = await supabase.from("templates").select("*").eq("user_id", userId)
+
+    if (error) throw error
+    return data
+  },
+
+  async getPlantillasMensaje(userId: string) {
+    return this.getMessageTemplates(userId)
+  },
+
+  async createMessageTemplate(templateData: any) {
+    const { data, error } = await supabase.from("templates").insert([templateData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  // Variable functions
+  async crearVariable(variableData: any) {
+    const { data, error } = await supabase.from("variables").insert([variableData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async actualizarVariable(id: string, variableData: any) {
+    const { data, error } = await supabase.from("variables").update(variableData).eq("id", id).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async eliminarVariable(id: string) {
+    const { error } = await supabase.from("variables").delete().eq("id", id)
+
+    if (error) throw error
+    return true
+  },
+
+  // Statistics functions
+  async getEstadisticas(userId: string) {
+    // Get counts from different tables
+    const [contactsCount, messagesCount, templatesCount, groupsCount] = await Promise.all([
+      supabase.from("contacts").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("messages").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("templates").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("groups").select("id", { count: "exact" }).eq("user_id", userId),
+    ])
+
+    // Get recent messages
+    const { data: recentMessages } = await supabase
+      .from("messages")
+      .select(`
+        *,
+        contact:contacts(name, phone)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    return {
+      contactsCount: contactsCount.count || 0,
+      messagesCount: messagesCount.count || 0,
+      templatesCount: templatesCount.count || 0,
+      groupsCount: groupsCount.count || 0,
+      recentMessages: recentMessages || [],
+    }
+  },
+
+  // User functions
+  async getUsers() {
+    const { data, error } = await supabase.from("users").select("*")
+
+    if (error) throw error
+    return data
+  },
+
+  // Activity logs
+  async registrarActividad(logData: any) {
+    const { data, error } = await supabase.from("activity_logs").insert([logData]).select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async getActivityLogs(userId: string) {
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+
+  // Add getSentMessages for compatibility
+  async getSentMessages(userId: string) {
+    return this.getMensajesEnviados(userId)
+  },
 }
 
-// Crear un pool de conexiones
-let pool: mysql.Pool
+// Export all the functions that are being imported directly
+export const {
+  getUser,
+  getUserByEmail,
+  createUser,
+  getContacts,
+  getContact,
+  createContact,
+  updateContact,
+  deleteContact,
+  getGroups,
+  getGroup,
+  getMessages,
+  getMessage,
+  getTemplates,
+  getTemplate,
+  getVariables,
+  getVariable,
+  executeQuery,
+  actualizarConfiguracion,
+  crearContacto,
+  getContactos,
+  getDetallesGrupo,
+  getGruposContacto,
+  agregarContactoAGrupo,
+  eliminarContactoDeGrupo,
+  getMensajesEnviados,
+  getMensajeById,
+  enviarMensaje,
+  getMessageTemplates,
+  getPlantillasMensaje,
+  createMessageTemplate,
+  crearVariable,
+  actualizarVariable,
+  eliminarVariable,
+  getEstadisticas,
+  getUsers,
+  registrarActividad,
+  getActivityLogs,
+  getSentMessages,
+} = db
 
-// Inicializar el pool de conexiones
-function getPool() {
-  if (!pool) {
-    pool = mysql.createPool(dbConfig)
-    console.log("Pool de conexiones creado")
-  }
-  return pool
-}
-
-// Función para ejecutar consultas SQL
-export async function executeQuery<T>(query: string, params: any[] = []): Promise<T> {
-  try {
-    const pool = getPool()
-    const [results] = await pool.execute(query, params)
-    return results as T
-  } catch (error) {
-    console.error("Error al ejecutar la consulta:", error)
-    throw error
-  }
-}
-
-// Funciones específicas para cada tabla
-
-// Plantillas de mensajes
-export async function getPlantillasMensaje() {
-  return executeQuery<any[]>(`
-    SELECT * FROM plantillas_mensaje
-  `)
-}
-
-export async function getMessageTemplates() {
-  return executeQuery<any[]>(`
-    SELECT id, name, content, creator_id, created_at
-    FROM message_templates
-  `)
-}
-
-// Variables
-export async function getVariables() {
-  return executeQuery<any[]>(`
-    SELECT * FROM variables
-  `)
-}
-
-// Contactos
-export async function getContactos() {
-  return executeQuery<any[]>(`
-    SELECT * FROM contactos
-  `)
-}
-
-// Grupos de contactos
-export async function getGruposContacto() {
-  return executeQuery<any[]>(`
-    SELECT gc.*, COUNT(mg.contacto_id) as total_contactos
-    FROM grupos_contacto gc
-    LEFT JOIN miembros_grupo mg ON gc.id = mg.grupo_id
-    GROUP BY gc.id
-  `)
-}
-
-// Mensajes enviados
-export async function getMensajesEnviados() {
-  return executeQuery<any[]>(`
-    SELECT me.*, pm.nombre as nombre_plantilla
-    FROM mensajes_enviados me
-    LEFT JOIN plantillas_mensaje pm ON me.plantilla_id = pm.id
-    ORDER BY me.fecha_envio DESC
-  `)
-}
-
-// Función para obtener un mensaje por su ID
-// Modificar la función getMensajeById para que no dependa de la tabla 'users'
-export async function getMensajeById(id: number) {
-  try {
-    const mensaje = await executeQuery<any[]>(
-      `
-      SELECT me.*, pm.nombre as nombre_plantilla
-      FROM mensajes_enviados me
-      LEFT JOIN plantillas_mensaje pm ON me.plantilla_id = pm.id
-      WHERE me.id = ?
-    `,
-      [id],
-    )
-
-    if (mensaje.length === 0) {
+// Export a mock Prisma client for compatibility
+export const prisma = {
+  user: {
+    findUnique: async ({ where }: any) => {
+      if (where.email) {
+        return db.getUserByEmail(where.email)
+      }
+      if (where.id) {
+        return db.getUser(where.id)
+      }
       return null
-    }
-
-    return mensaje[0]
-  } catch (error) {
-    console.error("Error al obtener mensaje por ID:", error)
-    throw error
-  }
+    },
+    findMany: async () => {
+      return db.getUsers()
+    },
+    create: async ({ data }: any) => {
+      return db.createUser(data)
+    },
+    update: async ({ where, data }: any) => {
+      const user = await db.getUser(where.id)
+      if (!user) return null
+      return db.createUser({ ...user, ...data })
+    },
+  },
+  contact: {
+    findMany: async ({ where }: any) => {
+      if (where?.userId) {
+        return db.getContacts(where.userId)
+      }
+      return []
+    },
+    findUnique: async ({ where }: any) => {
+      return db.getContact(where.id)
+    },
+    create: async ({ data }: any) => {
+      return db.createContact(data)
+    },
+    update: async ({ where, data }: any) => {
+      return db.updateContact(where.id, data)
+    },
+    delete: async ({ where }: any) => {
+      await db.deleteContact(where.id)
+      return { id: where.id }
+    },
+  },
+  // Add other models as needed
+  $connect: async () => {
+    // No-op for compatibility
+    return Promise.resolve()
+  },
+  $disconnect: async () => {
+    // No-op for compatibility
+    return Promise.resolve()
+  },
 }
 
-export async function getSentMessages() {
-  return executeQuery<any[]>(`
-    SELECT id, phone_number, message_content, status, sent_by_id, sent_at
-    FROM sent_messages
-  `)
-}
-
-// Estadísticas
-export async function getEstadisticas() {
-  // Total de mensajes
-  const totalMensajes = await executeQuery<any[]>(`
-    SELECT COUNT(*) as total FROM mensajes_enviados
-  `)
-
-  // Mensajes por estado
-  const mensajesPorEstado = await executeQuery<any[]>(`
-    SELECT estado, COUNT(*) as total 
-    FROM mensajes_enviados 
-    GROUP BY estado
-  `)
-
-  // Mensajes por día (últimos 7 días)
-  const mensajesPorDia = await executeQuery<any[]>(`
-    SELECT DATE(fecha_envio) as fecha, COUNT(*) as total 
-    FROM mensajes_enviados 
-    WHERE fecha_envio >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-    GROUP BY DATE(fecha_envio)
-    ORDER BY fecha DESC
-  `)
-
-  // Mensajes por hora (últimas 24 horas)
-  const mensajesPorHora = await executeQuery<any[]>(`
-    SELECT HOUR(fecha_envio) as hora, COUNT(*) as total 
-    FROM mensajes_enviados 
-    WHERE fecha_envio >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    GROUP BY HOUR(fecha_envio)
-    ORDER BY hora
-  `)
-
-  // Mensajes por semana (últimas 4 semanas)
-  const mensajesPorSemana = await executeQuery<any[]>(`
-    SELECT YEARWEEK(fecha_envio) as semana, 
-           MIN(DATE(fecha_envio)) as fecha_inicio,
-           COUNT(*) as total 
-    FROM mensajes_enviados 
-    WHERE fecha_envio >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
-    GROUP BY YEARWEEK(fecha_envio)
-    ORDER BY semana DESC
-  `)
-
-  // Plantillas más usadas
-  const plantillasMasUsadas = await executeQuery<any[]>(`
-    SELECT pm.id, pm.nombre, COUNT(me.id) as total,
-           ROUND(COUNT(me.id) * 100.0 / (SELECT COUNT(*) FROM mensajes_enviados WHERE plantilla_id IS NOT NULL), 1) as porcentaje
-    FROM mensajes_enviados me
-    JOIN plantillas_mensaje pm ON me.plantilla_id = pm.id
-    GROUP BY pm.id, pm.nombre
-    ORDER BY total DESC
-    LIMIT 5
-  `)
-
-  // Tasa de entrega y error
-  const tasaEntrega = await executeQuery<any[]>(`
-    SELECT 
-      ROUND(
-        (SELECT COUNT(*) FROM mensajes_enviados WHERE estado = 'entregado') * 100.0 / 
-        NULLIF((SELECT COUNT(*) FROM mensajes_enviados), 0),
-        1
-      ) as tasa_entrega,
-      ROUND(
-        (SELECT COUNT(*) FROM mensajes_enviados WHERE estado = 'fallido') * 100.0 / 
-        NULLIF((SELECT COUNT(*) FROM mensajes_enviados), 0),
-        1
-      ) as tasa_error
-  `)
-
-  // Crecimiento respecto al período anterior (últimos 7 días vs 7 días anteriores)
-  const crecimiento = await executeQuery<any[]>(`
-    SELECT 
-      (SELECT COUNT(*) FROM mensajes_enviados 
-       WHERE fecha_envio >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) as periodo_actual,
-      (SELECT COUNT(*) FROM mensajes_enviados 
-       WHERE fecha_envio >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) 
-       AND fecha_envio < DATE_SUB(CURDATE(), INTERVAL 7 DAY)) as periodo_anterior
-  `)
-
-  // Calcular porcentaje de crecimiento
-  let porcentajeCrecimiento = 0
-  if (crecimiento.length > 0) {
-    const periodoActual = crecimiento[0].periodo_actual || 0
-    const periodoAnterior = crecimiento[0].periodo_anterior || 0
-
-    if (periodoAnterior > 0) {
-      porcentajeCrecimiento = Math.round(((periodoActual - periodoAnterior) / periodoAnterior) * 100)
-    } else if (periodoActual > 0) {
-      porcentajeCrecimiento = 100 // Si no había mensajes antes pero ahora sí, es un 100% de crecimiento
-    }
-  }
-
-  // Obtener configuración de costo y moneda
-  const configCosto = (await getConfiguracion("costo_mensaje")) || "0.032"
-  const configMoneda = (await getConfiguracion("moneda")) || "€"
-
-  return {
-    totalMensajes: totalMensajes[0]?.total || 0,
-    mensajesPorEstado,
-    mensajesPorDia,
-    mensajesPorHora,
-    mensajesPorSemana,
-    plantillasMasUsadas,
-    tasaEntrega: tasaEntrega[0]?.tasa_entrega || 0,
-    tasaError: tasaEntrega[0]?.tasa_error || 0,
-    porcentajeCrecimiento,
-    costoPromedio: configCosto,
-    moneda: configMoneda,
-  }
-}
-
-// Enviar un nuevo mensaje
-export async function enviarMensaje(
-  telefono: string,
-  contenido: string,
-  plantillaId?: number,
-  variablesUsadas?: any,
-  estado = "enviado", // Parámetro de estado con valor predeterminado
-) {
-  return executeQuery<any>(
-    `INSERT INTO mensajes_enviados 
-     (telefono, contenido_mensaje, plantilla_id, variables_usadas, estado) 
-     VALUES (?, ?, ?, ?, ?)`,
-    [telefono, contenido, plantillaId || null, JSON.stringify(variablesUsadas || {}), estado],
-  )
-}
-
-// Crear un nuevo contacto
-export async function crearContacto(telefono: string, nombre: string, apellido: string, correo: string) {
-  return executeQuery<any>(
-    `INSERT INTO contactos 
-     (telefono, nombre, apellido, correo) 
-     VALUES (?, ?, ?, ?)`,
-    [telefono, nombre, apellido, correo],
-  )
-}
-
-// Crear una nueva plantilla
-export async function crearPlantilla(nombre: string, contenido: string, descripcion: string) {
-  return executeQuery<any>(
-    `INSERT INTO plantillas_mensaje 
-     (nombre, contenido, descripcion) 
-     VALUES (?, ?, ?)`,
-    [nombre, contenido, descripcion],
-  )
-}
-
-export async function createMessageTemplate(name: string, content: string, userId: number) {
-  return executeQuery<any>(
-    `INSERT INTO message_templates
-     (name, content, creator_id)
-     VALUES (?, ?, ?)`,
-    [name, content, userId],
-  )
-}
-
-// Crear una nueva variable
-export async function crearVariable(nombre: string, descripcion: string, ejemplo: string) {
-  return executeQuery<any>(
-    `INSERT INTO variables 
-     (nombre, descripcion, ejemplo) 
-     VALUES (?, ?, ?)`,
-    [nombre, descripcion, ejemplo],
-  )
-}
-
-export async function createUser(username: string, passwordHash: string, email: string) {
-  return executeQuery<any>(`INSERT INTO users (username, password, email) VALUES (?, ?, ?)`, [
-    username,
-    passwordHash,
-    email,
-  ])
-}
-
-export async function getUsers() {
-  return executeQuery<any[]>(`SELECT id, username, email, created_at FROM users`)
-}
-
-export async function getActivityLogs() {
-  return executeQuery<any[]>(`
-      SELECT id, user_id, username, action, description, ip_address, created_at
-      FROM activity_logs
-      ORDER BY created_at DESC
-  `)
-}
-
-// Función para registrar actividad
-export async function registrarActividad(
-  usuarioId: number | null,
-  accion: string,
-  descripcion: string,
-  direccionIp: string,
-) {
-  return executeQuery<any>(
-    `INSERT INTO registros_actividad 
-     (usuario_id, accion, descripcion, direccion_ip) 
-     VALUES (?, ?, ?, ?)`,
-    [usuarioId, accion, descripcion, direccionIp],
-  )
-}
-
-// Función para obtener configuración del sistema
-export async function getConfiguracion(clave: string) {
-  const resultado = await executeQuery<any[]>(
-    `SELECT valor_configuracion FROM configuracion_sistema WHERE clave_configuracion = ?`,
-    [clave],
-  )
-
-  return resultado.length > 0 ? resultado[0].valor_configuracion : null
-}
-
-// Función para actualizar configuración del sistema
-export async function actualizarConfiguracion(clave: string, valor: string, usuarioId?: number) {
-  return executeQuery<any>(
-    `INSERT INTO configuracion_sistema (clave_configuracion, valor_configuracion, actualizado_por)
-     VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE valor_configuracion = ?, actualizado_por = ?`,
-    [clave, valor, usuarioId || null, valor, usuarioId || null],
-  )
-}
-
-// Función para obtener detalles de un grupo de contactos
-export async function getDetallesGrupo(grupoId: number) {
-  const grupo = await executeQuery<any[]>(`SELECT * FROM grupos_contacto WHERE id = ?`, [grupoId])
-
-  if (grupo.length === 0) {
-    return null
-  }
-
-  const miembros = await executeQuery<any[]>(
-    `SELECT c.* 
-     FROM contactos c
-     JOIN miembros_grupo mg ON c.id = mg.contacto_id
-     WHERE mg.grupo_id = ?`,
-    [grupoId],
-  )
-
-  return {
-    ...grupo[0],
-    miembros,
-  }
-}
-
-// Función para añadir un contacto a un grupo
-export async function agregarContactoAGrupo(contactoId: number, grupoId: number) {
-  return executeQuery<any>(`INSERT INTO miembros_grupo (contacto_id, grupo_id) VALUES (?, ?)`, [contactoId, grupoId])
-}
-
-// Función para eliminar un contacto de un grupo
-export async function eliminarContactoDeGrupo(contactoId: number, grupoId: number) {
-  return executeQuery<any>(`DELETE FROM miembros_grupo WHERE contacto_id = ? AND grupo_id = ?`, [contactoId, grupoId])
-}
-
-// Función para eliminar una plantilla
-export async function eliminarPlantilla(plantillaId: number) {
-  return executeQuery<any>(`DELETE FROM plantillas_mensaje WHERE id = ?`, [plantillaId])
-}
-
-// Función para eliminar una variable
-export async function eliminarVariable(variableId: number) {
-  return executeQuery<any>(`DELETE FROM variables WHERE id = ?`, [variableId])
-}
-
-// Función para eliminar un contacto
-export async function eliminarContacto(contactoId: number) {
-  return executeQuery<any>(`DELETE FROM contactos WHERE id = ?`, [contactoId])
-}
-
-// Función para actualizar una plantilla
-export async function actualizarPlantilla(plantillaId: number, nombre: string, contenido: string, descripcion: string) {
-  return executeQuery<any>(
-    `UPDATE plantillas_mensaje 
-     SET nombre = ?, contenido = ?, descripcion = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [nombre, contenido, descripcion, plantillaId],
-  )
-}
-
-// Función para actualizar una variable
-export async function actualizarVariable(variableId: number, nombre: string, descripcion: string, ejemplo: string) {
-  return executeQuery<any>(
-    `UPDATE variables 
-     SET nombre = ?, descripcion = ?, ejemplo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [nombre, descripcion, ejemplo, variableId],
-  )
-}
-
-// Función para actualizar un contacto
-export async function actualizarContacto(
-  contactoId: number,
-  telefono: string,
-  nombre: string,
-  apellido: string,
-  correo: string,
-) {
-  return executeQuery<any>(
-    `UPDATE contactos 
-     SET telefono = ?, nombre = ?, apellido = ?, correo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [telefono, nombre, apellido, correo, contactoId],
-  )
-}

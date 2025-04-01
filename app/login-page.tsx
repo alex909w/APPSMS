@@ -1,150 +1,115 @@
-"use client";
+"use client"
 
-import React, { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Eye, EyeOff, AlertCircle, Github } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/useAuth";
-import { FcGoogle } from "react-icons/fc";
+import type React from "react"
+
+import { useState } from "react"
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 export default function LoginPage() {
-  const { login, loginWithProvider, isLoading } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!username || !password) {
-      setError("Por favor ingrese usuario y contraseña");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
 
     try {
-      const result = await login(username, password);
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      })
 
-      if (!result.success) {
-        setError(result.error || "Usuario o contraseña incorrectos");
-      } else {
-        // Redirigir al dashboard después de un inicio de sesión exitoso
-        window.location.href = "/dashboard";
+      if (result?.error) {
+        setError("Invalid email or password")
+        setLoading(false)
+        return
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
-    } finally {
-      setLoading(false);
+
+      router.push("/dashboard")
+    } catch (error) {
+      setError("Something went wrong. Please try again.")
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex justify-center">
-          <h1 className="text-3xl font-bold text-primary">SMS App</h1>
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-6 shadow-md">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">Welcome Back</h1>
+          <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
-            <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Usuario</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Ingresa tu usuario"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                    ¿Olvidaste tu contraseña?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Ingresa tu contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
-                  </Button>
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading || isLoading}>
-                {loading || isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <div className="relative flex w-full items-center justify-center">
-              <div className="absolute inset-x-0 top-1/2 h-px bg-muted"></div>
-              <span className="relative bg-card px-2 text-xs text-muted-foreground">O continúa con</span>
+        {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4 w-full">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => loginWithProvider("google")}
-                disabled={isLoading}
-              >
-                <FcGoogle className="w-5 h-5" />
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => loginWithProvider("github")}
-                disabled={isLoading}
-              >
-                <Github className="h-4 w-4 mr-2" />
-                GitHub
-              </Button>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+              />
             </div>
-            <div className="text-center text-sm">
-              ¿No tienes una cuenta?{" "}
-              <Link href="/register" className="text-primary hover:underline">
-                Regístrate
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 text-center text-sm">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Sign in with Google
+          </button>
+          <p>
+            Don't have an account?{" "}
+            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
-  );
+  )
 }
+

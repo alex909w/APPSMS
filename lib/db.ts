@@ -148,27 +148,28 @@ export async function getContactos() {
 // Actualizar contacto
 export async function actualizarContacto(
   id: string,
-  data: { nombre?: string; apellido?: string; telefono?: string; correo?: string },
+  data: { nombre?: string; apellido?: string | null; telefono?: string; correo?: string | null },
 ) {
   const updates = []
   const values = []
 
-  if (data.nombre) {
+  // Usar !== undefined para incluir valores vacíos y null
+  if (data.nombre !== undefined) {
     updates.push(`nombre = $${updates.length + 1}`)
     values.push(data.nombre)
   }
 
-  if (data.apellido) {
+  if (data.apellido !== undefined) {
     updates.push(`apellido = $${updates.length + 1}`)
     values.push(data.apellido)
   }
 
-  if (data.telefono) {
+  if (data.telefono !== undefined) {
     updates.push(`telefono = $${updates.length + 1}`)
     values.push(data.telefono)
   }
 
-  if (data.correo) {
+  if (data.correo !== undefined) {
     updates.push(`correo = $${updates.length + 1}`)
     values.push(data.correo)
   }
@@ -188,12 +189,26 @@ export async function eliminarContacto(id: string) {
 }
 
 // Crear un nuevo contacto
-export async function crearContacto(telefono: string, nombre: string, apellido: string, correo: string) {
-  return executeQuery<any>(
-    `INSERT INTO contactos (telefono, nombre, apellido, correo) 
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [telefono, nombre, apellido, correo],
-  )
+export async function crearContacto(data: {
+  telefono: string
+  nombre: string
+  apellido?: string | null
+  correo?: string | null
+}) {
+  const client = await pool.connect()
+  
+  try {
+    const result = await client.query(
+      `INSERT INTO contactos (telefono, nombre, apellido, correo)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, telefono, nombre, apellido, correo, creado_en`,
+      [data.telefono, data.nombre, data.apellido, data.correo]
+    )
+    
+    return result.rows[0]
+  } finally {
+    client.release()
+  }
 }
 
 // Grupos de contactos

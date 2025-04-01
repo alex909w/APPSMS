@@ -17,16 +17,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     // Añadir cada contacto al grupo
     for (const contactId of contactIds) {
-      await agregarContactoAGrupo(contactId, grupoId)
+      await agregarContactoAGrupo(grupoId.toString(), contactId.toString())
     }
 
-    // Registrar actividad
-    await registrarActividad(
-      null, // usuarioId (null para sistema)
-      "add_contacts_to_group",
-      `Se añadieron ${contactIds.length} contactos al grupo ${grupoId}`,
-      request.headers.get("x-forwarded-for") || "127.0.0.1",
-    )
+    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    await registrarActividad({
+      accion: "add_contacts_to_group",
+      descripcion: `Se añadieron ${contactIds.length} contactos al grupo ${grupoId}`,
+      direccion_ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+    })
 
     return NextResponse.json(
       {
@@ -55,15 +54,14 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     // Eliminar el contacto del grupo
-    await eliminarContactoDeGrupo(contactId, grupoId)
+    await eliminarContactoDeGrupo(grupoId.toString(), contactId.toString())
 
-    // Registrar actividad
-    await registrarActividad(
-      null, // usuarioId (null para sistema)
-      "remove_contact_from_group",
-      `Se eliminó el contacto ${contactId} del grupo ${grupoId}`,
-      request.headers.get("x-forwarded-for") || "127.0.0.1",
-    )
+    // Registrar actividad - CORREGIDO: Ajustado para coincidir con la firma de la función
+    await registrarActividad({
+      accion: "remove_contact_from_group",
+      descripcion: `Se eliminó el contacto ${contactId} del grupo ${grupoId}`,
+      direccion_ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
+    })
 
     return NextResponse.json(
       {

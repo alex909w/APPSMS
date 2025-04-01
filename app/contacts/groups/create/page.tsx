@@ -42,13 +42,15 @@ export default function CreateGroupPage() {
         throw new Error(errorData.error || "Error al crear el grupo")
       }
 
+      const data = await response.json()
+
       toast({
         title: "Grupo creado",
         description: "El grupo ha sido creado exitosamente",
       })
 
-      // Redireccionar a la lista de contactos
-      router.push("/contacts?tab=groups")
+      // Redireccionar a los detalles del grupo
+      router.push(`/contacts/groups/${data.id}`)
       router.refresh()
     } catch (error: any) {
       console.error("Error al crear el grupo:", error)
@@ -66,7 +68,7 @@ export default function CreateGroupPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Nuevo Grupo</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Crear Nuevo Grupo</h2>
           <p className="text-muted-foreground">Crea un nuevo grupo para organizar tus contactos</p>
         </div>
         <Link href="/contacts?tab=groups">
@@ -80,7 +82,7 @@ export default function CreateGroupPage() {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Detalles del Grupo</CardTitle>
-          <CardDescription>Configura los detalles del nuevo grupo</CardDescription>
+          <CardDescription>Ingresa la información del nuevo grupo</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,11 +107,11 @@ export default function CreateGroupPage() {
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
-                <>Guardando...</>
+                <>Creando...</>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Guardar Grupo
+                  Crear Grupo
                 </>
               )}
             </Button>

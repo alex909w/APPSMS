@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,20 +10,50 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 export default function CreateContactPage() {
-  const [telefono, setTelefono] = useState("")
-  const [nombre, setNombre] = useState("")
-  const [apellido, setApellido] = useState("")
-  const [correo, setCorreo] = useState("")
+  const [formData, setFormData] = useState({
+    telefono: "",
+    nombre: "",
+    apellido: "",
+    correo: ""
+  })
   const [isLoading, setIsLoading] = useState(false)
 
   const { toast } = useToast()
   const router = useRouter()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
+      // Validación básica
+      if (!formData.telefono.trim()) {
+        throw new Error("El teléfono es requerido")
+      }
+      
+      if (!formData.nombre.trim()) {
+        throw new Error("El nombre es requerido")
+      }
+
+      // Validación de formato de teléfono
+      const phoneRegex = /^\+?[0-9]{10,15}$/
+      if (!phoneRegex.test(formData.telefono)) {
+        throw new Error("Formato de teléfono inválido. Use + seguido de código de país y número")
+      }
+
+      // Validación de email si se proporciona
+      if (formData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
+        throw new Error("Formato de correo electrónico inválido")
+      }
+
       // Enviar datos a la API
       const response = await fetch("/api/contactos", {
         method: "POST",
@@ -33,31 +61,35 @@ export default function CreateContactPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          telefono,
-          nombre,
-          apellido,
-          correo,
+          telefono: formData.telefono.trim(),
+          nombre: formData.nombre.trim(),
+          apellido: formData.apellido.trim() || null, // Enviar null si está vacío
+          correo: formData.correo.trim() || null       // Enviar null si está vacío
         }),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al crear el contacto")
+        throw new Error(result.error || "Error al crear el contacto")
       }
 
       toast({
-        title: "Contacto creado",
-        description: "El contacto ha sido creado exitosamente",
+        title: "Éxito",
+        description: "Contacto creado correctamente",
       })
 
-      // Redireccionar a la lista de contactos
-      router.push("/contacts")
-      router.refresh()
+      // Redireccionar con un pequeño delay para que se vea el toast
+      setTimeout(() => {
+        router.push("/contacts")
+        router.refresh()
+      }, 500)
+
     } catch (error: any) {
-      console.error("Error al crear el contacto:", error)
+      console.error("Error al crear contacto:", error)
       toast({
         title: "Error",
-        description: error.message || "Error al crear el contacto",
+        description: error.message,
         variant: "destructive",
       })
     } finally {
@@ -88,33 +120,46 @@ export default function CreateContactPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Teléfono</label>
+              <label className="text-sm font-medium">Teléfono*</label>
               <Input
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                placeholder="Ej: +34612345678"
+                name="telefono"
+                value={formData.telefono}
+                onChange={handleChange}
+                placeholder="Ej: +50378573605"
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Ingresa el número de teléfono completo con el código de país.
+                Formato: +código de país y número (ej: +50378573605)
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre</label>
-              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Juan" required />
+              <label className="text-sm font-medium">Nombre*</label>
+              <Input 
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                placeholder="Ej: Juan"
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Apellido</label>
-              <Input value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Ej: Pérez" />
+              <Input 
+                name="apellido"
+                value={formData.apellido}
+                onChange={handleChange}
+                placeholder="Ej: Pérez"
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Correo Electrónico</label>
               <Input
-                value={correo}
-                onChange={(e) => setCorreo(e.target.value)}
+                name="correo"
+                value={formData.correo}
+                onChange={handleChange}
                 placeholder="Ej: juan@example.com"
                 type="email"
               />
@@ -136,4 +181,3 @@ export default function CreateContactPage() {
     </div>
   )
 }
-

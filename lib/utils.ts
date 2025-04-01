@@ -5,8 +5,6 @@ export async function registrarActividad(
   direccionIp: string,
 ) {
   // Implementación de la función registrarActividad
-  // Esta es una función placeholder. La implementación real dependerá
-  // de cómo se interactúa con la base de datos.
   console.log("Actividad registrada:", {
     usuarioId,
     accion,

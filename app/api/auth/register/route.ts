@@ -7,41 +7,51 @@ export async function POST(request: Request) {
 
     // Validaciones básicas
     if (!username || !email || !password) {
-      return NextResponse.json({ message: "Todos los campos son obligatorios" }, { status: 400 })
+      return NextResponse.json(
+        { message: "Todos los campos son obligatorios" },
+        { status: 400 }
+      )
     }
 
     // Verificar si el usuario ya existe
     const existingUsers = await executeQuery<any[]>(
-      "SELECT * FROM usuarios WHERE nombre_usuario = ? OR correo_electronico = ? LIMIT 1",
-      [username, email],
+      "SELECT * FROM users WHERE name = $1 OR email = $2 LIMIT 1",
+      [username, email]
     )
 
     if (existingUsers.length > 0) {
       const existingUser = existingUsers[0]
-      if (existingUser.nombre_usuario === username) {
-        return NextResponse.json({ message: "El nombre de usuario ya está en uso" }, { status: 400 })
+      if (existingUser.name === username) {
+        return NextResponse.json(
+          { message: "El nombre de usuario ya está en uso" },
+          { status: 400 }
+        )
       }
-      if (existingUser.correo_electronico === email) {
-        return NextResponse.json({ message: "El correo electrónico ya está registrado" }, { status: 400 })
+      if (existingUser.email === email) {
+        return NextResponse.json(
+          { message: "El correo electrónico ya está registrado" },
+          { status: 400 }
+        )
       }
     }
 
-    // En un caso real, deberías hashear la contraseña antes de guardarla
-    // Por ejemplo, con bcrypt: const hashedPassword = await bcrypt.hash(password, 10)
-
-    // Insertar el nuevo usuario
-    await executeQuery(
-      "INSERT INTO usuarios (nombre_usuario, correo_electronico, contrasena, rol) VALUES (?, ?, ?, ?)",
-      [username, email, password, "usuario"],
+    // Insertar el nuevo usuario (adaptado a tu estructura de DB)
+    const newUser = await executeQuery<any>(
+      `INSERT INTO users (name, email, password) 
+       VALUES ($1, $2, $3) 
+       RETURNING id, name, email`, // No retornar password
+      [username, email, password] // En producción usar hashed password
     )
 
     return NextResponse.json({
       message: "Usuario registrado exitosamente",
-      user: { username, email },
+      user: newUser[0] // Devuelve el usuario creado (sin password)
     })
   } catch (error) {
     console.error("Error al registrar usuario:", error)
-    return NextResponse.json({ message: "Error al registrar usuario" }, { status: 500 })
+    return NextResponse.json(
+      { message: "Error al registrar usuario" },
+      { status: 500 }
+    )
   }
 }
-

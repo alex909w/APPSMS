@@ -4,7 +4,7 @@ import { createUser, getUsers } from "@/lib/db";
 export async function GET() {
   try {
     const users = await getUsers();
-    return NextResponse.json({ users });
+    return NextResponse.json(users); // Cambiado para devolver directamente el array
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
     return NextResponse.json(
@@ -16,20 +16,27 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { username, password, email } = await request.json();
+    const { name, email, password } = await request.json(); // Cambiado username por name para coincidir con tu DB
 
-    if (!username || !password || !email) {
+    if (!name || !email) { // Password es opcional en tu schema de DB
       return NextResponse.json(
-        { error: "Todos los campos son requeridos" },
+        { error: "Nombre y email son requeridos" }, // Mensaje actualizado
         { status: 400 }
       );
     }
 
-    // Guardar la contraseña en texto plano (sin bcrypt)
-    await createUser(username, password, email);
+    // Crear usuario con la estructura que espera tu función createUser
+    const newUser = await createUser({ 
+      name, 
+      email, 
+      password: password || null // Manejando el password opcional
+    });
 
     return NextResponse.json(
-      { message: "Usuario creado exitosamente" },
+      { 
+        message: "Usuario creado exitosamente",
+        user: newUser // Devuelve el usuario creado
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -1,42 +1,42 @@
-import { NextResponse } from "next/server"
-import { getToken } from "next-auth/jwt"
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-  const isAuthenticated = !!token
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const isLoggedIn = !!token;
 
-  const isAuthPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/register")
+  // 1. Definición de rutas públicas (accesibles sin login)
+  const publicPaths = [
+    "/",           // Ahora es el login
+    "/login",      // Alternativa (redirige a "/")
+    "/api/auth",   // Rutas de autenticación
+    "/auth/error"  // Página de errores
+  ];
 
-  if (isAuthPage) {
-    if (isAuthenticated) {
-      return NextResponse.redirect(new URL("/dashboard", req.url))
-    }
-    return NextResponse.next()
+  const isPublicPath = publicPaths.some(path => 
+    request.nextUrl.pathname === path || 
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  // 2. Redirigir /login a / (para tener una sola ruta de login)
+  if (request.nextUrl.pathname === "/login") {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (!isAuthenticated && !req.nextUrl.pathname.startsWith("/api/auth")) {
-    const loginUrl = new URL("/login", req.url)
-    loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+  // 3. Si el usuario ESTÁ logueado y trata de acceder al login (/)
+  if (isLoggedIn && request.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next()
+  // 4. Si el usuario NO está logueado y trata de acceder a ruta privada
+  if (!isLoggedIn && !isPublicPath) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/contacts/:path*",
-    "/messages/:path*",
-    "/templates/:path*",
-    "/variables/:path*",
-    "/settings/:path*",
-    "/stats/:path*",
-    "/send-sms/:path*",
-    "/send-bulk/:path*",
-    "/login",
-    "/register",
-  ],
-}
-
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

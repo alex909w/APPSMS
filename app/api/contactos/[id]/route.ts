@@ -1,116 +1,87 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { supabase } from "@/lib/supabase"
+import { eliminarContacto, actualizarContacto, registrarActividad, executeQuery } from "@/lib/db"
 
+// Get a specific contact
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const id = params.id
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    // Validamos que sea un número válido antes de usarlo en la consulta
+    const numericId = Number.parseInt(id)
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
+    const contacto = await executeQuery<any[]>(`SELECT * FROM contactos WHERE id = ?`, [numericId])
 
-    if (error) {
-      console.error("Error fetching contact:", error)
-      return NextResponse.json({ error: "Failed to fetch contact" }, { status: 500 })
+    if (!contacto || contacto.length === 0) {
+      return NextResponse.json({ error: "Contacto no encontrado" }, { status: 404 })
     }
 
-    if (!data) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json({ contacto: contacto[0] })
   } catch (error) {
-    console.error("Error in contact API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener contacto:", error)
+    return NextResponse.json({ error: "Error al obtener contacto" }, { status: 500 })
   }
 }
 
+// Update a contact
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const id = params.id
+    const numericId = Number.parseInt(id)
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    const body = await request.json()
+    const { telefono, nombre, apellido, correo } = await request.json()
 
-    // First check if the contact belongs to the user
-    const { data: existingContact, error: fetchError } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
-
-    if (fetchError || !existingContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 })
+    if (!telefono || !nombre) {
+      return NextResponse.json({ error: "Teléfono y nombre son requeridos" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from("contacts")
-      .update({
-        name: body.name,
-        phone: body.phone,
-        email: body.email || null,
-        notes: body.notes || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-      .select()
+    await actualizarContacto(numericId, telefono, nombre, apellido || "", correo || "")
 
-    if (error) {
-      console.error("Error updating contact:", error)
-      return NextResponse.json({ error: "Failed to update contact" }, { status: 500 })
-    }
+    // Registrar actividad
+    await registrarActividad(
+      null, // usuarioId (null para sistema)
+      "update_contact",
+      `Contacto actualizado: ${nombre} ${apellido || ""} (${telefono})`,
+      request.headers.get("x-forwarded-for") || "127.0.0.1",
+    )
 
-    return NextResponse.json(data[0])
+    return NextResponse.json({ message: "Contacto actualizado exitosamente" })
   } catch (error) {
-    console.error("Error in contact API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al actualizar contacto:", error)
+    return NextResponse.json({ error: "Error al actualizar contacto" }, { status: 500 })
   }
 }
 
+// Delete a contact
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions)
+    const id = params.id
+    const numericId = Number.parseInt(id)
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
 
-    // First check if the contact belongs to the user
-    const { data: existingContact, error: fetchError } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("id", params.id)
-      .eq("user_id", session.user.id)
-      .single()
+    await eliminarContacto(numericId)
 
-    if (fetchError || !existingContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 })
-    }
+    // Registrar actividad
+    await registrarActividad(
+      null, // usuarioId (null para sistema)
+      "delete_contact",
+      `Contacto eliminado: ID ${id}`,
+      request.headers.get("x-forwarded-for") || "127.0.0.1",
+    )
 
-    const { error } = await supabase.from("contacts").delete().eq("id", params.id)
-
-    if (error) {
-      console.error("Error deleting contact:", error)
-      return NextResponse.json({ error: "Failed to delete contact" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ message: "Contacto eliminado exitosamente" })
   } catch (error) {
-    console.error("Error in contact API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al eliminar contacto:", error)
+    return NextResponse.json({ error: "Error al eliminar contacto" }, { status: 500 })
   }
 }
 

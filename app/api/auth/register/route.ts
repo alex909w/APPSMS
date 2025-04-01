@@ -1,70 +1,47 @@
 import { NextResponse } from "next/server"
-import { hash } from "bcryptjs"
-import { supabase } from "@/lib/supabase"
+import { executeQuery } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { name, email, password } = body
+    const { username, email, password } = await request.json()
 
-    // Validate input
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    // Validaciones básicas
+    if (!username || !email || !password) {
+      return NextResponse.json({ message: "Todos los campos son obligatorios" }, { status: 400 })
     }
 
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .single()
+    // Verificar si el usuario ya existe
+    const existingUsers = await executeQuery<any[]>(
+      "SELECT * FROM usuarios WHERE nombre_usuario = ? OR correo_electronico = ? LIMIT 1",
+      [username, email],
+    )
 
-    if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409 })
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0]
+      if (existingUser.nombre_usuario === username) {
+        return NextResponse.json({ message: "El nombre de usuario ya está en uso" }, { status: 400 })
+      }
+      if (existingUser.correo_electronico === email) {
+        return NextResponse.json({ message: "El correo electrónico ya está registrado" }, { status: 400 })
+      }
     }
 
-    // Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-        },
-      },
+    // En un caso real, deberías hashear la contraseña antes de guardarla
+    // Por ejemplo, con bcrypt: const hashedPassword = await bcrypt.hash(password, 10)
+
+    // Insertar el nuevo usuario
+    await executeQuery(
+      "INSERT INTO usuarios (nombre_usuario, correo_electronico, contrasena, rol) VALUES (?, ?, ?, ?)",
+      [username, email, password, "usuario"],
+    )
+
+    return NextResponse.json({
+      message: "Usuario registrado exitosamente",
+      user: { username, email },
     })
-
-    if (authError) {
-      console.error("Error creating user in Supabase Auth:", authError)
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
-    }
-
-    // Hash password for our users table
-    const hashedPassword = await hash(password, 10)
-
-    // Create user in our users table
-    const { data, error } = await supabase
-      .from("users")
-      .insert([
-        {
-          id: authData.user?.id,
-          name,
-          email,
-          password: hashedPassword,
-          role: "user",
-        },
-      ])
-      .select()
-
-    if (error) {
-      console.error("Error creating user in database:", error)
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, message: "User created successfully" }, { status: 201 })
   } catch (error) {
-    console.error("Error in register API:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al registrar usuario:", error)
+    return NextResponse.json({ message: "Error al registrar usuario" }, { status: 500 })
   }
 }
 

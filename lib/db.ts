@@ -99,34 +99,39 @@ export async function getVariables() {
 }
 
 // Crear variable
-export async function crearVariable(data: { nombre: string; valor: string }) {
-  return executeQuery<any>("INSERT INTO variables (nombre, valor) VALUES ($1, $2) RETURNING *", [
-    data.nombre,
-    data.valor,
-  ])
+export async function crearVariable(data: {
+  nombre: string;
+  descripcion: string;
+  ejemplo?: string;
+  creado_por?: number;
+}) {
+  return executeQuery<any>(
+    `INSERT INTO variables 
+     (nombre, descripcion, ejemplo, creado_por, fecha_creacion, fecha_actualizacion) 
+     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+     RETURNING *`,
+    [
+      data.nombre,
+      data.descripcion,
+      data.ejemplo || null,
+      data.creado_por || null
+    ]
+  );
 }
 
 // Actualizar variable
-export async function actualizarVariable(id: string, data: { nombre?: string; valor?: string }) {
-  const updates = []
-  const values = []
-
-  if (data.nombre) {
-    updates.push(`nombre = $${updates.length + 1}`)
-    values.push(data.nombre)
-  }
-
-  if (data.valor) {
-    updates.push(`valor = $${updates.length + 1}`)
-    values.push(data.valor)
-  }
-
-  if (updates.length === 0) return null
-
-  values.push(id)
+export async function actualizarVariable(data: {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  ejemplo?: string | null;
+}) {
   return executeQuery<any>(
-    `UPDATE variables SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`,
-    values,
+    `UPDATE variables 
+     SET nombre = $1, descripcion = $2, ejemplo = $3, fecha_actualizacion = CURRENT_TIMESTAMP
+     WHERE id = $4
+     RETURNING *`,
+    [data.nombre, data.descripcion, data.ejemplo || null, data.id]
   )
 }
 

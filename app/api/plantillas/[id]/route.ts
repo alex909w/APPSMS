@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { eliminarPlantilla, actualizarPlantilla, registrarActividad, executeQuery } from "@/lib/db"
 
+export const dynamic = 'force-dynamic' // Esto soluciona el problema de params
+
 // Helper function to parse and validate ID
 const parseAndValidateId = (id: string) => {
   const numericId = Number.parseInt(id)

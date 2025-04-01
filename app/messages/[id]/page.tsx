@@ -1,7 +1,7 @@
 import { getMensajeById } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Send, RefreshCw } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { notFound } from "next/navigation"
@@ -86,12 +86,6 @@ export default async function MessageDetailsPage({ params }: Props) {
               Volver a Mensajes
             </Button>
           </Link>
-          <Link href={`/messages/${id}/resend`}>
-            <Button>
-              <Send className="mr-2 h-4 w-4" />
-              Reenviar
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -165,28 +159,6 @@ export default async function MessageDetailsPage({ params }: Props) {
                   <p>{mensaje.enviado_por_id}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Acciones</CardTitle>
-              <CardDescription>Operaciones disponibles para este mensaje</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Link href={`/messages/${id}/resend`} className="w-full">
-                <Button className="w-full">
-                  <Send className="mr-2 h-4 w-4" />
-                  Reenviar Mensaje
-                </Button>
-              </Link>
-
-              <Link href={`/admin/mensajes?id=${id}`} className="w-full">
-                <Button variant="outline" className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Cambiar Estado
-                </Button>
-              </Link>
             </CardContent>
           </Card>
         </div>

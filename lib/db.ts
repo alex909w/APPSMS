@@ -369,6 +369,48 @@ export const db = {
   },
 }
 
+// Export all the functions that are being imported directly
+export const {
+  getUser,
+  getUserByEmail,
+  createUser,
+  getContacts,
+  getContact,
+  createContact,
+  updateContact,
+  deleteContact,
+  getGroups,
+  getGroup,
+  getMessages,
+  getMessage,
+  getTemplates,
+  getTemplate,
+  getVariables,
+  getVariable,
+  executeQuery,
+  actualizarConfiguracion,
+  crearContacto,
+  getContactos,
+  getDetallesGrupo,
+  getGruposContacto,
+  agregarContactoAGrupo,
+  eliminarContactoDeGrupo,
+  getMensajesEnviados,
+  getMensajeById,
+  enviarMensaje,
+  getMessageTemplates,
+  getPlantillasMensaje,
+  createMessageTemplate,
+  crearVariable,
+  actualizarVariable,
+  eliminarVariable,
+  getEstadisticas,
+  getUsers,
+  registrarActividad,
+  getActivityLogs,
+  getSentMessages,
+} = db
+
 // Export a mock Prisma client for compatibility
 export const prisma = {
   user: {

@@ -17,37 +17,120 @@ export function ReleaseNotes() {
 
     // Escribir el contenido en el iframe
     const contentHtml = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Notas de Versión - SMS Platform</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-          h1 { color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
-          h2 { color: #4b5563; margin-top: 30px; }
-          h3 { color: #6b7280; }
-          .page-break { page-break-after: always; }
-          .version { border-left: 4px solid #2563eb; padding-left: 15px; margin-bottom: 30px; }
-          .version-header { display: flex; justify-content: space-between; align-items: center; }
-          .version-date { color: #6b7280; font-size: 0.9em; }
-          .feature { margin-bottom: 10px; }
-          .feature-type { font-weight: bold; margin-right: 5px; }
-          .new { color: #059669; }
-          .improved { color: #0284c7; }
-          .fixed { color: #d97706; }
-          .security { color: #dc2626; }
-          @media print {
-            .page-break { page-break-after: always; }
-          }
-        </style>
-      </head>
-      <body>
-        ${contentRef.current?.innerHTML || ""}
-      </body>
-      </html>
-    `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas de Versión - SMS Platform</title>
+    <style>
+      body { 
+        font-family: Arial, sans-serif; 
+        line-height: 1.6; 
+        color: #fff; 
+        background-color: #121212;
+        max-width: 800px; 
+        margin: 0 auto; 
+        padding: 20px; 
+      }
+      h1 { 
+        color: #fff; 
+        border-bottom: 2px solid #444;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
+        font-size: 28px;
+      }
+      h2 { 
+        color: #fff; 
+        margin-top: 30px;
+        font-size: 22px;
+      }
+      h3 { 
+        color: #eee; 
+        font-size: 18px;
+      }
+      .page-break { 
+        page-break-after: always; 
+      }
+      .version { 
+        border-left: 4px solid #3b82f6; 
+        padding: 20px;
+        margin-bottom: 40px;
+        background-color: #1e1e1e;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      .version-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 10px;
+      }
+      .version-date { 
+        color: #aaa; 
+        font-size: 0.9em;
+        font-style: italic;
+      }
+      .feature { 
+        margin-bottom: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background-color: #2a2a2a;
+      }
+      .feature-type { 
+        font-weight: bold; 
+        margin-right: 8px;
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+      .new { 
+        color: #fff; 
+        background-color: #059669;
+      }
+      .improved { 
+        color: #fff; 
+        background-color: #0284c7;
+      }
+      .fixed { 
+        color: #fff; 
+        background-color: #d97706;
+      }
+      .security { 
+        color: #fff; 
+        background-color: #dc2626;
+      }
+      @media print {
+        body {
+          color: #000;
+          background-color: #fff;
+        }
+        h1, h2, h3 {
+          color: #000;
+        }
+        .version {
+          background-color: #f8f8f8;
+          border-left: 4px solid #3b82f6;
+          box-shadow: none;
+        }
+        .feature {
+          background-color: #eee;
+        }
+        .page-break { page-break-after: always; }
+        .version {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    ${contentRef.current?.innerHTML || ""}
+  </body>
+  </html>
+`
 
     printFrame.contentDocument?.open()
     printFrame.contentDocument?.write(contentHtml)
@@ -63,34 +146,98 @@ export function ReleaseNotes() {
   const handleDownload = () => {
     // Crear un blob con el contenido HTML
     const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Notas de Versión - SMS Platform</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-          h1 { color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
-          h2 { color: #4b5563; margin-top: 30px; }
-          h3 { color: #6b7280; }
-          .page-break { page-break-after: always; }
-          .version { border-left: 4px solid #2563eb; padding-left: 15px; margin-bottom: 30px; }
-          .version-header { display: flex; justify-content: space-between; align-items: center; }
-          .version-date { color: #6b7280; font-size: 0.9em; }
-          .feature { margin-bottom: 10px; }
-          .feature-type { font-weight: bold; margin-right: 5px; }
-          .new { color: #059669; }
-          .improved { color: #0284c7; }
-          .fixed { color: #d97706; }
-          .security { color: #dc2626; }
-        </style>
-      </head>
-      <body>
-        ${contentRef.current?.innerHTML || ""}
-      </body>
-      </html>
-    `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas de Versión - SMS Platform</title>
+    <style>
+      body { 
+        font-family: Arial, sans-serif; 
+        line-height: 1.6; 
+        color: #fff; 
+        background-color: #121212;
+        max-width: 800px; 
+        margin: 0 auto; 
+        padding: 20px; 
+      }
+      h1 { 
+        color: #fff; 
+        border-bottom: 2px solid #444;
+        padding-bottom: 12px;
+        margin-bottom: 24px;
+        font-size: 28px;
+      }
+      h2 { 
+        color: #fff; 
+        margin-top: 30px;
+        font-size: 22px;
+      }
+      h3 { 
+        color: #eee; 
+        font-size: 18px;
+      }
+      .page-break { 
+        page-break-after: always; 
+      }
+      .version { 
+        border-left: 4px solid #3b82f6; 
+        padding: 20px;
+        margin-bottom: 40px;
+        background-color: #1e1e1e;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      .version-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #444;
+        padding-bottom: 10px;
+      }
+      .version-date { 
+        color: #aaa; 
+        font-size: 0.9em;
+        font-style: italic;
+      }
+      .feature { 
+        margin-bottom: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background-color: #2a2a2a;
+      }
+      .feature-type { 
+        font-weight: bold; 
+        margin-right: 8px;
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+      .new { 
+        color: #fff; 
+        background-color: #059669;
+      }
+      .improved { 
+        color: #fff; 
+        background-color: #0284c7;
+      }
+      .fixed { 
+        color: #fff; 
+        background-color: #d97706;
+      }
+      .security { 
+        color: #fff; 
+        background-color: #dc2626;
+      }
+    </style>
+  </head>
+  <body>
+    ${contentRef.current?.innerHTML || ""}
+  </body>
+  </html>
+`
 
     const blob = new Blob([htmlContent], { type: "text/html" })
     const url = URL.createObjectURL(blob)
@@ -104,32 +251,45 @@ export function ReleaseNotes() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Notas de Versión</h2>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-gray-900 p-4 rounded-lg shadow-md border border-gray-700">
+        <h2 className="text-2xl font-bold text-white">Notas de Versión</h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handlePrint}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
+          >
             <Printer className="mr-2 h-4 w-4" />
             Imprimir
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            className="bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
+          >
             <Download className="mr-2 h-4 w-4" />
             Descargar
           </Button>
         </div>
       </div>
 
-      <div ref={contentRef} className="prose max-w-none">
-        <h1>Notas de Versión - SMS Platform</h1>
+      <div
+        ref={contentRef}
+        className="prose max-w-none bg-gray-900 p-6 rounded-lg shadow-md border border-gray-700 text-white"
+      >
+        <h1 className="text-white border-b-2 border-gray-700 pb-3 mb-6">Notas de Versión - SMS Platform</h1>
 
-        <p>
+        <p className="text-gray-300 mb-8">
           Este documento contiene las notas de versión de SMS Platform, detallando las nuevas características, mejoras y
           correcciones de errores en cada versión.
         </p>
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.5.0</h2>
+            <h2 className="text-white m-0">Versión 2.5.0</h2>
             <span className="version-date">15 de mayo de 2023</span>
           </div>
 
@@ -165,7 +325,7 @@ export function ReleaseNotes() {
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.4.0</h2>
+            <h2 className="text-white m-0">Versión 2.4.0</h2>
             <span className="version-date">1 de abril de 2023</span>
           </div>
 
@@ -201,7 +361,7 @@ export function ReleaseNotes() {
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.3.0</h2>
+            <h2 className="text-white m-0">Versión 2.3.0</h2>
             <span className="version-date">15 de febrero de 2023</span>
           </div>
 
@@ -237,7 +397,7 @@ export function ReleaseNotes() {
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.2.0</h2>
+            <h2 className="text-white m-0">Versión 2.2.0</h2>
             <span className="version-date">1 de enero de 2023</span>
           </div>
 
@@ -269,7 +429,7 @@ export function ReleaseNotes() {
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.1.0</h2>
+            <h2 className="text-white m-0">Versión 2.1.0</h2>
             <span className="version-date">15 de noviembre de 2022</span>
           </div>
 
@@ -297,7 +457,7 @@ export function ReleaseNotes() {
 
         <div className="version">
           <div className="version-header">
-            <h2>Versión 2.0.0</h2>
+            <h2 className="text-white m-0">Versión 2.0.0</h2>
             <span className="version-date">1 de octubre de 2022</span>
           </div>
 

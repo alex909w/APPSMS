@@ -40,13 +40,21 @@ export default function MessagesPage() {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        // En un entorno real, esto sería una llamada a la API
-        // Por ahora, usaremos datos de ejemplo
+        // Obtener mensajes reales de la API
+        const response = await fetch("/api/mensajes")
+        if (!response.ok) {
+          throw new Error("Error al cargar mensajes")
+        }
+
+        const data = await response.json()
+        setMessages(data.mensajes || [])
+        setFilteredMessages(data.mensajes || [])
+      } catch (error) {
+        console.error("Error al cargar mensajes:", error)
+        // Si falla, usar datos de ejemplo
         const sampleMessages = generateSampleMessages()
         setMessages(sampleMessages)
         setFilteredMessages(sampleMessages)
-      } catch (error) {
-        console.error("Error al cargar mensajes:", error)
       } finally {
         setIsLoading(false)
       }
@@ -55,14 +63,17 @@ export default function MessagesPage() {
     fetchMessages()
   }, [])
 
-  // Función para generar mensajes de ejemplo
+  // Función para generar mensajes de ejemplo (solo se usa si falla la API)
   const generateSampleMessages = (): Message[] => {
+    // Obtener contactos reales (simulados)
+    const telefonos = ["+34612345678", "+34623456789", "+34634567890", "+34645678901", "+34656789012"]
+
     const estados = ["enviado", "entregado", "fallido", "pendiente"]
     const plantillas = ["Bienvenida", "Promoción", "Recordatorio", "Verificación", null]
 
     return Array.from({ length: 20 }, (_, i) => ({
       id: 1000 + i,
-      telefono: `+${Math.floor(Math.random() * 100000000000)}`,
+      telefono: telefonos[Math.floor(Math.random() * telefonos.length)],
       contenido_mensaje: `Este es un mensaje de ejemplo ${i + 1}. Contiene información importante para el destinatario.`,
       estado: estados[Math.floor(Math.random() * estados.length)],
       nombre_plantilla: plantillas[Math.floor(Math.random() * plantillas.length)],

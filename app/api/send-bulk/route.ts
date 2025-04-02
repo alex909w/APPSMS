@@ -1,101 +1,120 @@
 import { NextResponse } from "next/server"
-import { getDetallesGrupo, enviarMensaje, registrarActividad } from "@/lib/db"
+import { executeQuery } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
-    const { grupoId, mensaje, plantillaId, variablesUsadas, estadoSimulado, tasaExito } = await request.json()
+    const {
+      grupoId,
+      mensaje,
+      plantillaId,
+      variablesUsadas,
+      estadoSimulado = "enviado",
+      tasaExito = 100,
+    } = await request.json()
 
+    // Validar campos requeridos
     if (!grupoId || !mensaje) {
       return NextResponse.json({ error: "Grupo y mensaje son requeridos" }, { status: 400 })
     }
 
     // Obtener contactos del grupo
-    const grupo = await getDetallesGrupo(Number.parseInt(grupoId))
+    const contactos = await executeQuery<any>(
+      `SELECT c.* FROM contactos c
+       INNER JOIN grupo_contacto gc ON c.id = gc.contacto_id
+       WHERE gc.grupo_id = $1`,
+      [grupoId],
+    )
 
-    if (!grupo || !grupo.miembros || grupo.miembros.length === 0) {
-      return NextResponse.json({ error: "El grupo no existe o no tiene contactos" }, { status: 400 })
+    if (contactos.length === 0) {
+      return NextResponse.json({ error: "El grupo seleccionado no tiene contactos" }, { status: 400 })
     }
 
+    // Validar y establecer el estado
+    const estado = ["enviado", "entregado", "fallido", "pendiente"].includes(estadoSimulado)
+      ? estadoSimulado
+      : "enviado"
+
+    // Simular envío de mensajes
     const resultados = {
-      total: grupo.miembros.length,
+      total: contactos.length,
       enviados: 0,
       fallidos: 0,
       detalles: [],
     }
 
-    // Validar el estado simulado si se proporciona
-    const estado =
-      estadoSimulado && ["enviado", "entregado", "fallido", "pendiente"].includes(estadoSimulado)
-        ? estadoSimulado
-        : "enviado" // Estado predeterminado
-
-    // Validar la tasa de éxito (entre 0 y 100)
-    const tasa = tasaExito !== undefined ? Math.min(Math.max(Number(tasaExito), 0), 100) : 100
-
     // Procesar cada contacto
-    for (const contacto of grupo.miembros) {
-      try {
-        // Simular un pequeño retraso para cada mensaje
-        await new Promise((resolve) => setTimeout(resolve, 200))
+    for (const contacto of contactos) {
+      // Reemplazar variables en el mensaje para cada contacto
+      let mensajePersonalizado = mensaje
 
-        // Determinar si este mensaje será exitoso o fallido basado en la tasa de éxito
-        const esExitoso = Math.random() * 100 <= tasa
+      // Reemplazar variables específicas del contacto si están disponibles
+      if (contacto.nombre) {
+        mensajePersonalizado = mensajePersonalizado.replace(/<nombre>/g, contacto.nombre)
+      }
+      if (contacto.apellido) {
+        mensajePersonalizado = mensajePersonalizado.replace(/<apellido>/g, contacto.apellido)
+      }
 
-        if (esExitoso) {
-          // Enviar mensaje con el estado simulado
-          const resultado = await enviarMensaje(
-            contacto.telefono,
-            mensaje,
-            plantillaId ? Number.parseInt(plantillaId) : undefined,
-            variablesUsadas,
-            estado, // Usar el estado simulado
-          )
-
-          resultados.enviados++
-          resultados.detalles.push({
-            contactoId: contacto.id,
-            telefono: contacto.telefono,
-            estado: estado,
-            mensajeId: resultado.id, // Acceder directamente al ID del resultado
-          })
-        } else {
-          // Simular un mensaje fallido
-          resultados.fallidos++
-          resultados.detalles.push({
-            contactoId: contacto.id,
-            telefono: contacto.telefono,
-            estado: "fallido",
-            error: "Error simulado en el envío",
-          })
-        }
-      } catch (error: any) {
-        resultados.fallidos++
-        resultados.detalles.push({
-          contactoId: contacto.id,
-          telefono: contacto.telefono,
-          estado: "fallido",
-          error: error.message || "Error desconocido",
+      // Reemplazar otras variables genéricas
+      if (variablesUsadas) {
+        Object.entries(variablesUsadas).forEach(([key, value]) => {
+          const regex = new RegExp(`<${key}>`, "g")
+          mensajePersonalizado = mensajePersonalizado.replace(regex, value as string)
         })
       }
+
+      // Determinar si el mensaje es exitoso basado en la tasa de éxito
+      const esExitoso = Math.random() * 100 <= tasaExito
+
+      // Estado final del mensaje
+      const estadoFinal = esExitoso ? estado : "fallido"
+
+      // Registrar el mensaje en la base de datos
+      const resultado = await executeQuery<any>(
+        `INSERT INTO mensajes_enviados 
+         (telefono, contenido_mensaje, plantilla_id, variables_usadas, estado, fecha_envio) 
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+         RETURNING *`,
+        [
+          contacto.telefono,
+          mensajePersonalizado,
+          plantillaId || null,
+          variablesUsadas ? JSON.stringify(variablesUsadas) : null,
+          estadoFinal,
+        ],
+      )
+
+      // Actualizar contadores
+      if (estadoFinal === "fallido") {
+        resultados.fallidos++
+      } else {
+        resultados.enviados++
+      }
+
+      // Añadir detalles del envío
+      resultados.detalles.push({
+        id: resultado[0].id,
+        telefono: contacto.telefono,
+        nombre: contacto.nombre,
+        apellido: contacto.apellido,
+        estado: estadoFinal,
+      })
     }
 
-    // Registrar actividad
-    await registrarActividad({
-      accion: "send_bulk_sms",
-      descripcion: `Envío masivo a grupo ${grupoId}: ${resultados.enviados} enviados, ${resultados.fallidos} fallidos`,
-      direccion_ip: request.headers.get("x-forwarded-for") || "127.0.0.1",
-    })
-
-    return NextResponse.json({
-      resultados,
-      success: true,
-      message: `Se han enviado ${resultados.enviados} mensajes exitosamente y fallaron ${resultados.fallidos} mensajes`,
-    })
-  } catch (error: any) {
-    console.error("Error en envío masivo:", error)
     return NextResponse.json(
       {
-        error: error.message || "Error en envío masivo",
+        message: `Mensajes enviados: ${resultados.enviados}, fallidos: ${resultados.fallidos}`,
+        resultados,
+        success: true,
+      },
+      { status: 200 },
+    )
+  } catch (error) {
+    console.error("Error al enviar mensajes masivos:", error)
+    return NextResponse.json(
+      {
+        error: "Error al enviar mensajes masivos",
+        details: error instanceof Error ? error.message : String(error),
         success: false,
       },
       { status: 500 },

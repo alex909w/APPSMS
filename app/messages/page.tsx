@@ -1,3 +1,8 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Filter } from "lucide-react"
@@ -12,12 +17,97 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getMensajesEnviados } from "@/lib/db"
 import Link from "next/link"
 
-export default async function MessagesPage() {
-  // Obtener datos reales de la base de datos
-  const messages = await getMensajesEnviados()
+// Definir la interfaz para los mensajes
+interface Message {
+  id: number
+  telefono: string
+  contenido_mensaje: string
+  estado: string
+  nombre_plantilla: string | null
+  fecha_envio: string
+}
+
+export default function MessagesPage() {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [filteredMessages, setFilteredMessages] = useState<Message[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("todos")
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Cargar mensajes al inicio
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        // En un entorno real, esto sería una llamada a la API
+        // Por ahora, usaremos datos de ejemplo
+        const sampleMessages = generateSampleMessages()
+        setMessages(sampleMessages)
+        setFilteredMessages(sampleMessages)
+      } catch (error) {
+        console.error("Error al cargar mensajes:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMessages()
+  }, [])
+
+  // Función para generar mensajes de ejemplo
+  const generateSampleMessages = (): Message[] => {
+    const estados = ["enviado", "entregado", "fallido", "pendiente"]
+    const plantillas = ["Bienvenida", "Promoción", "Recordatorio", "Verificación", null]
+
+    return Array.from({ length: 20 }, (_, i) => ({
+      id: 1000 + i,
+      telefono: `+${Math.floor(Math.random() * 100000000000)}`,
+      contenido_mensaje: `Este es un mensaje de ejemplo ${i + 1}. Contiene información importante para el destinatario.`,
+      estado: estados[Math.floor(Math.random() * estados.length)],
+      nombre_plantilla: plantillas[Math.floor(Math.random() * plantillas.length)],
+      fecha_envio: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(),
+    }))
+  }
+
+  // Función para filtrar mensajes
+  const filterMessages = () => {
+    let result = [...messages]
+
+    // Aplicar filtro de búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      result = result.filter(
+        (message) =>
+          message.id.toString().includes(term) ||
+          message.telefono.toLowerCase().includes(term) ||
+          message.contenido_mensaje.toLowerCase().includes(term) ||
+          (message.nombre_plantilla && message.nombre_plantilla.toLowerCase().includes(term)),
+      )
+    }
+
+    // Aplicar filtro de estado
+    if (statusFilter !== "todos") {
+      result = result.filter((message) => message.estado === statusFilter)
+    }
+
+    setFilteredMessages(result)
+  }
+
+  // Actualizar los mensajes filtrados cuando cambian los filtros
+  useEffect(() => {
+    filterMessages()
+  }, [searchTerm, statusFilter, messages])
+
+  // Manejar cambios en la búsqueda
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
+  // Manejar cambios en el filtro de estado
+  const handleStatusFilter = (status: string) => {
+    setStatusFilter(status)
+  }
 
   // Función para obtener el color del badge según el estado
   const getStatusColor = (status: string) => {
@@ -28,8 +118,10 @@ export default async function MessagesPage() {
         return "bg-green-500"
       case "fallido":
         return "bg-red-500"
-      default:
+      case "pendiente":
         return "bg-yellow-500"
+      default:
+        return "bg-gray-500"
     }
   }
 
@@ -42,8 +134,10 @@ export default async function MessagesPage() {
         return "Entregado"
       case "fallido":
         return "Fallido"
-      default:
+      case "pendiente":
         return "Pendiente"
+      default:
+        return "Desconocido"
     }
   }
 
@@ -57,22 +151,29 @@ export default async function MessagesPage() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Buscar mensajes..." className="pl-8 w-[200px] md:w-[300px]" />
+            <Input
+              type="search"
+              placeholder="Buscar mensajes..."
+              className="pl-8 w-[200px] md:w-[300px]"
+              value={searchTerm}
+              onChange={handleSearch}
+            />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Filter className="mr-2 h-4 w-4" />
-                Filtrar
+                {statusFilter === "todos" ? "Filtrar" : `Filtro: ${getStatusText(statusFilter)}`}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filtrar por Estado</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Todos</DropdownMenuItem>
-              <DropdownMenuItem>Enviados</DropdownMenuItem>
-              <DropdownMenuItem>Entregados</DropdownMenuItem>
-              <DropdownMenuItem>Fallidos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusFilter("todos")}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusFilter("enviado")}>Enviados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusFilter("entregado")}>Entregados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusFilter("fallido")}>Fallidos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusFilter("pendiente")}>Pendientes</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -81,7 +182,11 @@ export default async function MessagesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Historial de Mensajes</CardTitle>
-          <CardDescription>Mensajes SMS enviados a tus contactos</CardDescription>
+          <CardDescription>
+            {filteredMessages.length === messages.length
+              ? "Mensajes SMS enviados a tus contactos"
+              : `Mostrando ${filteredMessages.length} de ${messages.length} mensajes`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -97,8 +202,17 @@ export default async function MessagesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {messages.length > 0 ? (
-                messages.map((message) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center">
+                    <div className="py-6">
+                      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-muted-foreground mt-2">Cargando mensajes...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredMessages.length > 0 ? (
+                filteredMessages.map((message) => (
                   <TableRow key={message.id}>
                     <TableCell>{message.id}</TableCell>
                     <TableCell>{message.telefono}</TableCell>
@@ -122,7 +236,13 @@ export default async function MessagesPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center">
-                    No hay mensajes enviados
+                    <div className="py-6">
+                      <p className="text-muted-foreground">
+                        {searchTerm || statusFilter !== "todos"
+                          ? "No se encontraron mensajes que coincidan con los criterios de búsqueda"
+                          : "No hay mensajes enviados"}
+                      </p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

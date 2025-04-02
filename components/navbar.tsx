@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Moon, Sun, User, Settings, HelpCircle, LogOut } from "lucide-react"
+import { Bell, Moon, Sun, User, Settings, HelpCircle, LogOut, Lock } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import {
@@ -207,6 +207,12 @@ export function Navbar() {
                 <Link href="/profile" className="flex items-center">
                   <User className="mr-2 h-4 w-4" />
                   <span>Perfil</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/change-password" className="flex items-center">
+                  <Lock className="mr-2 h-4 w-4" />
+                  <span>Cambiar Contraseña</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

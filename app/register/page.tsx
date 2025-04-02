@@ -140,7 +140,7 @@ export default function RegisterPage() {
               <Input
                 id="username"
                 name="username"
-                placeholder="usuario123"
+                placeholder="Ingresa un usuario"
                 value={formData.username}
                 onChange={handleChange}
                 disabled={isLoading}
@@ -153,7 +153,7 @@ export default function RegisterPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="tu@email.com"
+                placeholder="Ingresa tu correo"
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}

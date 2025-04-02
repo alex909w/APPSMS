@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Mapeo de acciones a nombres amigables (ampliado)
+// Mapeo de acciones a nombres amigables (ampliado con las acciones faltantes)
 const ACTION_NAMES = {
   // Acciones de autenticación
   login: "Inicio de sesión",
@@ -26,11 +26,17 @@ const ACTION_NAMES = {
 
   // Acciones de plantillas
   create_template: "Creación de plantilla",
+  creacion_plantilla: "Creación de plantilla", // Variante en español
   update_template: "Actualización de plantilla",
   delete_template: "Eliminación de plantilla",
   duplicate_template: "Duplicación de plantilla",
   import_template: "Importación de plantilla",
   export_template: "Exportación de plantilla",
+
+  // Acciones de variables
+  create_variable: "Creación de variable",
+  update_variable: "Actualización de variable",
+  delete_variable: "Eliminación de variable",
 
   // Acciones de contactos
   create_contact: "Creación de contacto",
@@ -42,10 +48,12 @@ const ACTION_NAMES = {
   update_group: "Actualización de grupo",
   delete_group: "Eliminación de grupo",
   add_to_group: "Adición a grupo",
+  add_contacts_to_group: "Adición de contactos a grupo", // Nueva acción
   remove_from_group: "Eliminación de grupo",
 
   // Acciones de mensajes
   send_sms: "Envío de mensaje",
+  send_bulk_sms: "Envío masivo de mensajes", // Nueva acción
   schedule_sms: "Programación de mensaje",
   cancel_sms: "Cancelación de mensaje",
   bulk_send: "Envío masivo",
@@ -86,18 +94,20 @@ const ACTION_NAMES = {
   rate_limit_exceeded: "Límite de tasa excedido",
 }
 
-// Categorías de acciones para filtrado (ampliadas)
+// Categorías de acciones para filtrado (ampliadas con las nuevas acciones)
 const ACTION_CATEGORIES = {
   all: "Todos",
   authentication: ["login", "logout", "password_reset", "password_change", "two_factor_auth"],
   templates: [
     "create_template",
+    "creacion_plantilla",
     "update_template",
     "delete_template",
     "duplicate_template",
     "import_template",
     "export_template",
   ],
+  variables: ["create_variable", "update_variable", "delete_variable"], // Nueva categoría
   contacts: [
     "create_contact",
     "update_contact",
@@ -108,9 +118,10 @@ const ACTION_CATEGORIES = {
     "update_group",
     "delete_group",
     "add_to_group",
+    "add_contacts_to_group",
     "remove_from_group",
   ],
-  messages: ["send_sms", "schedule_sms", "cancel_sms", "bulk_send"],
+  messages: ["send_sms", "send_bulk_sms", "schedule_sms", "cancel_sms", "bulk_send"],
   campaigns: [
     "create_campaign",
     "update_campaign",
@@ -179,7 +190,13 @@ export default function LogsPage({ initialLogs = [] }) {
     }
 
     // Acciones de creación
-    if (action.startsWith("create_") || action.includes("import") || action.includes("add_to")) {
+    if (
+      action.startsWith("create_") ||
+      action.includes("creacion") ||
+      action.includes("import") ||
+      action.includes("add_to") ||
+      action.includes("add_contacts")
+    ) {
       return "text-green-500"
     }
 
@@ -200,7 +217,7 @@ export default function LogsPage({ initialLogs = [] }) {
     }
 
     // Acciones de mensajes
-    if (action.includes("sms") || action.includes("bulk_send")) {
+    if (action.includes("sms") || action.includes("bulk_send") || action.includes("send_bulk")) {
       return "text-purple-500"
     }
 
@@ -326,6 +343,7 @@ export default function LogsPage({ initialLogs = [] }) {
               <DropdownMenuItem onClick={() => handleFilter("all")}>Todos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleFilter("authentication")}>Autenticación</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleFilter("templates")}>Plantillas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleFilter("variables")}>Variables</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleFilter("contacts")}>Contactos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleFilter("messages")}>Mensajes</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleFilter("campaigns")}>Campañas</DropdownMenuItem>

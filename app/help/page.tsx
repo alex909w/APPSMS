@@ -12,7 +12,7 @@ export default function HelpPage() {
           <h2 className="text-2xl font-bold tracking-tight">Centro de Ayuda</h2>
           <p className="text-muted-foreground">Encuentra respuestas a tus preguntas</p>
         </div>
-        <Link href="/">
+        <Link href="/dashboard">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al Dashboard
@@ -150,3 +150,4 @@ export default function HelpPage() {
     </div>
   )
 }
+

@@ -136,7 +136,7 @@ export default async function StatsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {estadisticas.moneda || "S"}
+              {estadisticas.moneda || "$"}
               {estadisticas.costoPromedio || "0.032"}
             </div>
             <p className="text-xs text-muted-foreground">Por mensaje enviado</p>

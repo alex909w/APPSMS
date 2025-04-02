@@ -1,19 +1,23 @@
 import type { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import { db } from "@/lib/db"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { executeQuery } from "@/lib/db"
+import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -21,95 +25,81 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Find user in database
-          const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [credentials.email])
+          const users = await executeQuery(
+            "SELECT id, nombre_usuario, correo, contrasena, nombre, apellido, imagen FROM usuarios WHERE correo = $1 AND activo = true",
+            [credentials.email]
+          )
 
-          const users = rows as any[]
-          const user = users[0]
-
-          if (!user) {
+          if (!users || users.length === 0) {
             return null
           }
 
-          // Simple password comparison without bcrypt
-          const passwordMatch = credentials.password === user.password
+          const user = users[0]
+          const isValid = await bcrypt.compare(credentials.password, user.contrasena)
 
-          if (!passwordMatch) {
+          if (!isValid) {
             return null
           }
 
           return {
             id: user.id.toString(),
-            name: user.name,
-            email: user.email,
-            role: user.role,
+            name: user.nombre && user.apellido ? `${user.nombre} ${user.apellido}` : user.nombre_usuario,
+            email: user.correo,
+            image: user.imagen || null,
           }
         } catch (error) {
-          console.error("Authentication error:", error)
+          console.error("Error en autenticación:", error)
           return null
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign in
-      if (account && user) {
-        // For OAuth providers
-        if (account.provider === "google") {
-          try {
-            // Check if user exists in database
-            const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [user.email])
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        try {
+          const existingUsers = await executeQuery("SELECT id FROM usuarios WHERE correo = $1", [user.email])
 
-            const users = rows as any[]
-            let dbUser = users[0]
+          if (!existingUsers || existingUsers.length === 0) {
+            const nameParts = user.name?.split(" ") || ["Usuario", "Google"]
+            const firstName = nameParts[0]
+            const lastName = nameParts.slice(1).join(" ")
 
-            // If user doesn't exist, create a new one
-            if (!dbUser && user.email) {
-              const [result] = await db.query(
-                "INSERT INTO users (name, email, role, created_at) VALUES (?, ?, 'user', NOW())",
-                [user.name, user.email],
-              )
-
-              const insertResult = result as any
-
-              // Get the newly created user
-              const [newUserRows] = await db.query("SELECT * FROM users WHERE id = ?", [insertResult.insertId])
-
-              const newUsers = newUserRows as any[]
-              dbUser = newUsers[0]
-            }
-
-            if (dbUser) {
-              token.id = dbUser.id.toString()
-              token.role = dbUser.role
-            }
-          } catch (error) {
-            console.error("Error in JWT callback:", error)
+            await executeQuery(
+              `INSERT INTO usuarios (nombre_usuario, correo, nombre, apellido, rol, activo, imagen) 
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                user.name?.replace(/\s+/g, "").toLowerCase() || `user_${Date.now()}`,
+                user.email,
+                firstName,
+                lastName,
+                "usuario",
+                true,
+                user.image,
+              ]
+            )
           }
-        } else {
-          // For credentials provider
-          token.id = user.id
-          token.role = user.role
+        } catch (error) {
+          console.error("Error al registrar usuario de Google:", error)
         }
       }
-      return token
+      return true
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
+      if (session?.user) {
+        session.user.id = token.sub as string
       }
       return session
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
     },
   },
   pages: {
     signIn: "/login",
-    error: "/auth/error",
-  },
-  session: {
-    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 }
-

@@ -395,7 +395,7 @@ export async function getEstadisticas() {
       mensajesPorSemana: mensajesPorSemana || [],
       porcentajeCrecimiento: Number.parseFloat(porcentajeCrecimiento[0]?.porcentaje) || 0,
       costoPromedio: 0.032, // Valor predeterminado
-      moneda: "€", // Valor predeterminado
+      moneda: "$", // Valor predeterminado
     }
   } catch (error) {
     console.error("Error al obtener estadísticas:", error)

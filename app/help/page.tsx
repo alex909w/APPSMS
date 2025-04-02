@@ -1,10 +1,29 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Mail, MessageSquare, Phone } from "lucide-react"
 import Link from "next/link"
+import { DocumentDialog } from "@/components/document-dialog"
 
 export default function HelpPage() {
+  const [documentDialog, setDocumentDialog] = useState<{
+    open: boolean
+    type: "manual" | "api" | "release-notes"
+  }>({
+    open: false,
+    type: "manual",
+  })
+
+  const openDocument = (type: "manual" | "api" | "release-notes") => {
+    setDocumentDialog({
+      open: true,
+      type,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -134,19 +153,26 @@ export default function HelpPage() {
               <CardDescription>Documentación y guías</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => openDocument("manual")}>
                 Manual de Usuario
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => openDocument("api")}>
                 Guía de API
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={() => openDocument("release-notes")}>
                 Notas de Versión
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Diálogo para mostrar documentos */}
+      <DocumentDialog
+        open={documentDialog.open}
+        onOpenChange={(open) => setDocumentDialog((prev) => ({ ...prev, open }))}
+        documentType={documentDialog.type}
+      />
     </div>
   )
 }
